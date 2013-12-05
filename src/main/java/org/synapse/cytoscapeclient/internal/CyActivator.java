@@ -10,6 +10,7 @@ import org.cytoscape.work.ServiceProperties;
 
 public class CyActivator extends AbstractCyActivator {
   public void start(BundleContext bc) {
+    System.out.println((new java.util.Date()).toString() + " started: " + getClass().getName());
     registerService(bc, new APIKeyTaskFactory(), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "API Key...",
       ServiceProperties.PREFERRED_MENU, "Apps.Synapse"

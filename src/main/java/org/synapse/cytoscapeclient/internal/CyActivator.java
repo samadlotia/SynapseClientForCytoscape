@@ -1,11 +1,19 @@
 package org.synapse.cytoscapeclient.internal;
 
 import java.util.Properties;
+
 import org.osgi.framework.BundleContext;
+
 import org.cytoscape.service.util.AbstractCyActivator;
+import org.cytoscape.work.TaskFactory;
+import org.cytoscape.work.ServiceProperties;
 
 public class CyActivator extends AbstractCyActivator {
   public void start(BundleContext bc) {
+    registerService(bc, new APIKeyTaskFactory(), TaskFactory.class, ezProps(
+      ServiceProperties.TITLE, "API Key...",
+      ServiceProperties.PREFERRED_MENU, "Apps.Synapse"
+    ));
   }
 
   private static Properties ezProps(String... vals) {
@@ -14,5 +22,4 @@ public class CyActivator extends AbstractCyActivator {
       props.put(vals[i], vals[i + 1]);
     return props;
   }
-
 }

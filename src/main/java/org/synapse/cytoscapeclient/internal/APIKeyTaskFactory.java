@@ -7,17 +7,31 @@ import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskMonitor;
 
 class APIKeyTaskFactory extends AbstractTaskFactory {
+  final APIKeyMgr apiKeyMgr;
+
+  public APIKeyTaskFactory(APIKeyMgr apiKeyMgr) {
+    this.apiKeyMgr = apiKeyMgr;
+  }
+
   public TaskIterator createTaskIterator() {
-    return new TaskIterator(new APIKeyTask());
+    return new TaskIterator(new APIKeyTask(apiKeyMgr));
   }
 }
 
 class APIKeyTask implements Task {
+
+  final APIKeyMgr apiKeyMgr;
+
   @Tunable(description="Synapse API Key")
   public String apiKey;
 
+  public APIKeyTask(APIKeyMgr apiKeyMgr) {
+    this.apiKeyMgr = apiKeyMgr;
+    this.apiKey = apiKeyMgr.get();
+  }
+
   public void run(TaskMonitor monitor) {
-    System.out.println(apiKey);
+    apiKeyMgr.set(apiKey);
   }
 
   public void cancel() {}

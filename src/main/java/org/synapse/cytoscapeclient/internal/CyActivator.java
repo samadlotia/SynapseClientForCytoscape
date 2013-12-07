@@ -4,6 +4,7 @@ import java.util.Properties;
 
 import org.osgi.framework.BundleContext;
 
+import org.cytoscape.application.CyApplicationConfiguration;
 import org.cytoscape.service.util.AbstractCyActivator;
 import org.cytoscape.work.TaskFactory;
 import org.cytoscape.work.ServiceProperties;
@@ -11,7 +12,12 @@ import org.cytoscape.work.ServiceProperties;
 public class CyActivator extends AbstractCyActivator {
   public void start(BundleContext bc) {
     System.out.println((new java.util.Date()).toString() + " started: " + getClass().getName());
-    registerService(bc, new APIKeyTaskFactory(), TaskFactory.class, ezProps(
+    
+    final CyApplicationConfiguration cyAppConf = getService(bc, CyApplicationConfiguration.class);
+
+    final APIKeyMgr apiKeyMgr = new APIKeyMgr(cyAppConf.getAppConfigurationDirectoryLocation(this.getClass()));
+
+    registerService(bc, new APIKeyTaskFactory(apiKeyMgr), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "API Key...",
       ServiceProperties.PREFERRED_MENU, "Apps.Synapse"
     ));

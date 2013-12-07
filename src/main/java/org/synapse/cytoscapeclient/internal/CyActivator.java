@@ -16,6 +16,7 @@ public class CyActivator extends AbstractCyActivator {
     final CyApplicationConfiguration cyAppConf = getService(bc, CyApplicationConfiguration.class);
 
     final APIKeyMgr apiKeyMgr = new APIKeyMgr(cyAppConf.getAppConfigurationDirectoryLocation(this.getClass()));
+    System.out.println("apiKeyMgr.get: \"" + apiKeyMgr.get() + "\"");
 
     registerService(bc, new APIKeyTaskFactory(apiKeyMgr), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "API Key...",

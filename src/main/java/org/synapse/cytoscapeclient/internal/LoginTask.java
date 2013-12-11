@@ -20,6 +20,13 @@ public class LoginTask implements Task {
   }
 
   public void run(TaskMonitor monitor) {
+    if (userId.length() != 0 && apiKey.length() != 0) {
+      monitor.setTitle("Synapse log in");
+      monitor.setStatusMessage("Retrieving user profile");
+
+      final SynapseClient c = SynapseClient.loginWithAPIKey(userId, apiKey);
+      monitor.setStatusMessage("Welcome, " + c.getUserDisplayName() + "!");
+    }
     authCacheMgr.setUserIDAPIKey(userId, apiKey);
   }
 

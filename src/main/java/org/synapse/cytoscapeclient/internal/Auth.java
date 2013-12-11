@@ -13,13 +13,13 @@ import java.security.InvalidKeyException;
 
 import javax.xml.bind.DatatypeConverter;
 
-abstract class Auth {
+abstract class Auth implements RestCall.HeaderAdder {
   private Auth() {}
 
   /**
    * Add authentication headers to the given rest call.
    */
-  public abstract RestCall authHeaders(RestCall c);
+  public abstract void headers(RestCall c);
 
   public static Auth withAPIKey(final String userId, final String apiKey) {
     return new APIKeyAuth(userId, apiKey);
@@ -35,7 +35,7 @@ abstract class Auth {
     public APIKeyAuth(final String userId, final String apiKey) {
       this.userId = userId;
 
-      // initialize mac object with the given api key as its secret key
+      // initialize mac with the given api key as its secret key
       final byte[] keyBytes = DatatypeConverter.parseBase64Binary(apiKey);
       try {
         final SecretKeySpec keySpec = new SecretKeySpec(keyBytes, CRYPT_ALGO);
@@ -63,14 +63,14 @@ abstract class Auth {
       return DatatypeConverter.printBase64Binary(encryptedMsg);
     }
 
-    public RestCall authHeaders(final RestCall c) {
+    public void headers(final RestCall c) {
       final String path = c.getConnection().getURL().getPath();
       final String timestamp = signatureTimestamp();
       final String signature = userId + path + timestamp;
 
-      return c.header("userId", userId)
-              .header("signatureTimestamp", timestamp)
-              .header("signature", encrypt(signature));
+      c.header("userId",             userId)
+       .header("signatureTimestamp", timestamp)
+       .header("signature",          encrypt(signature));
     }
   }
 }

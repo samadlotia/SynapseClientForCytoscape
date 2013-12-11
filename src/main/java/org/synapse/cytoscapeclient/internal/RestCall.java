@@ -19,6 +19,14 @@ import com.fasterxml.jackson.databind.JsonNode;
  * to issue rest API calls by using the builder pattern.
  */
 class RestCall {
+
+  /**
+   * Classes that can add headers to a rest call implement this.
+   */
+  public static interface HeaderAdder {
+    public void headers(RestCall c);
+  }
+
   final HttpURLConnection connection;
 
   private RestCall(String url) throws MalformedURLException, IOException {
@@ -51,6 +59,14 @@ class RestCall {
    */
   public RestCall header(final String k, final String v) {
     connection.setRequestProperty(k, v);
+    return this;
+  }
+
+  /**
+   * Calls the given {@code adder} object to add headers to this rest call.
+   */
+  public RestCall headers(final HeaderAdder adder) {
+    adder.headers(this);
     return this;
   }
 

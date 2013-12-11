@@ -40,6 +40,13 @@ class RestCall {
   }
 
   /**
+   * Return the underlying connection for this rest call.
+   */
+  public HttpURLConnection getConnection() {
+    return connection;
+  }
+
+  /**
    * Set an http request header.
    */
   public RestCall header(final String k, final String v) {

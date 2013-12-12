@@ -5,8 +5,11 @@ import org.cytoscape.work.Tunable;
 import org.cytoscape.work.TaskMonitor;
 
 public class ImportNetworkFromSynapseTask implements Task {
-  @Tunable(description="Entity ID")
+  @Tunable(description="Synapse ID", gravity=1.0)
   public String entityId;
+
+  @Tunable(description="Version", gravity=2.0)
+  public String version = "1";
 
   public ImportNetworkFromSynapseTask() {
   }

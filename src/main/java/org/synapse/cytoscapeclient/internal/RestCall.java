@@ -126,6 +126,15 @@ class RestCall {
     }
   }
 
+  public InputStream stream() throws RestException {
+    try {
+      checkResponse();
+    } catch (IOException e) {
+      throw new RestException(e);
+    }
+    return connection.getInputStream();
+  }
+
   private void checkResponse() throws RestException, IOException {
     connection.connect();
     final int code = connection.getResponseCode();

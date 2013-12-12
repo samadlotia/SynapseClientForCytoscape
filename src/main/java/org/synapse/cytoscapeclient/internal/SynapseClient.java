@@ -33,7 +33,7 @@ class SynapseClient {
   private String authenticateAndGetUserId() throws SynapseClientException {
     try {
       final JsonNode userProfile =
-        RestCall.to(REPO_ENDPOINT + "/userProfile/")
+        RestCall.to("%s%s", REPO_ENDPOINT, "/userProfile/")
         .headers(auth)
         .method("GET")
         .json();

@@ -37,7 +37,8 @@ class RestCall {
   /**
    * Start a Rest call to the given URL.
    */
-  public static RestCall to(final String urlStr) throws RestException {
+  public static RestCall to(final String urlFmt, Object... args) throws RestException {
+    final String urlStr = (args.length == 0) ? urlFmt : String.format(urlFmt, args);
     try {
       return new RestCall(urlStr);
     } catch (MalformedURLException e) {

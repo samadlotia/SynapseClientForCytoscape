@@ -21,6 +21,11 @@ public class CyActivator extends AbstractCyActivator {
       ServiceProperties.TITLE, "Login...",
       ServiceProperties.PREFERRED_MENU, "Apps.Synapse"
     ));
+
+    registerService(bc, new ImportNetworkFromSynapseTaskFactory(), TaskFactory.class, ezProps(
+      ServiceProperties.TITLE, "From Synapse...",
+      ServiceProperties.PREFERRED_MENU, "File.Import.Network"
+    ));
   }
 
   private static Properties ezProps(String... vals) {

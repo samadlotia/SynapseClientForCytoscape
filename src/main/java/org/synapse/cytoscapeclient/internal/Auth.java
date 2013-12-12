@@ -35,7 +35,7 @@ abstract class Auth implements RestCall.HeaderAdder {
     public APIKeyAuth(final String userId, final String apiKey) throws InvalidKeyException {
       this.userId = userId;
 
-      // initialize mac with the given api key as its secret key
+      // convert apiKey base64 string into a byte array
       byte[] keyBytes = null;
       try {
         keyBytes = DatatypeConverter.parseBase64Binary(apiKey);
@@ -45,6 +45,7 @@ abstract class Auth implements RestCall.HeaderAdder {
         throw new InvalidKeyException("Incorrect key length", e);
       }
 
+      // initialize mac with the given api key as its secret key
       try {
         final SecretKeySpec keySpec = new SecretKeySpec(keyBytes, CRYPT_ALGO);
         mac = Mac.getInstance(CRYPT_ALGO);

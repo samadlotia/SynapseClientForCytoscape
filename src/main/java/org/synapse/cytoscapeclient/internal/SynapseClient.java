@@ -1,6 +1,7 @@
 package org.synapse.cytoscapeclient.internal;
 
 import java.security.InvalidKeyException;
+import java.io.IOException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -11,7 +12,7 @@ class SynapseClient {
     return client;
   }
 
-  public static void loginWithAPIKey(final String userId, final String apiKey) throws SynapseClientException {
+  public static void loginWithAPIKey(final String userId, final String apiKey) throws SynapseClientException, IOException {
     try {
       client = new SynapseClient(Auth.withAPIKey(userId, apiKey));
     } catch (InvalidKeyException e) {
@@ -25,12 +26,12 @@ class SynapseClient {
   final Auth auth;
   final String userId;
 
-  private SynapseClient(final Auth auth) throws SynapseClientException {
+  private SynapseClient(final Auth auth) throws SynapseClientException, IOException {
     this.auth = auth;
     this.userId = authenticateAndGetUserId();
   }
 
-  private String authenticateAndGetUserId() throws SynapseClientException {
+  private String authenticateAndGetUserId() throws SynapseClientException, IOException {
     try {
       final JsonNode userProfile =
         RestCall.to("%s%s", REPO_ENDPOINT, "/userProfile/")
@@ -39,11 +40,7 @@ class SynapseClient {
         .json();
       return userProfile.get("ownerId").asText();
     } catch (RestException e) {
-      if (e.getCode() == 0) {
-        throw new SynapseClientException("Unable to connect to Synapse server", e);
-      } else {
-        throw new SynapseClientException("Authentication failed", e);
-      }
+      throw new SynapseClientException("Authentication failed", e);
     }
   }
 }

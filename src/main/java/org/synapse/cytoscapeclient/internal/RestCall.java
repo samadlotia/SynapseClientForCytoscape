@@ -37,14 +37,12 @@ class RestCall {
   /**
    * Start a Rest call to the given URL.
    */
-  public static RestCall to(final String urlFmt, Object... args) throws RestException {
+  public static RestCall to(final String urlFmt, Object... args) throws RestException, IOException {
     final String urlStr = (args.length == 0) ? urlFmt : String.format(urlFmt, args);
     try {
       return new RestCall(urlStr);
     } catch (MalformedURLException e) {
       throw new IllegalArgumentException("URL is not valid: " + urlStr, e);
-    } catch (IOException e) {
-      throw new RestException(e);
     }
   }
 
@@ -85,65 +83,49 @@ class RestCall {
 
   /**
    * Complete the rest call but ignore anything the server sends back.
-   * @throws RestException failure to communicate with server or unsuccessful http request, i.e. non 2xx response
+   * @throws RestException unsuccessful http request, i.e. non 2xx response
    */
-  public void nothing() throws RestException {
-    try {
-      checkResponse();
-      connection.disconnect();
-    } catch (IOException e) {
-      throw new RestException(e);
-    }
+  public void nothing() throws RestException, IOException {
+    checkResponse();
+    connection.disconnect();
   }
 
   /**
    * Complete the rest call and return what the server sent back as a string.
    */
-  public String text() throws RestException {
-    try {
-      checkResponse();
-      final String result = slurp(connection.getInputStream());
-      connection.disconnect();
-      return result;
-    } catch (IOException e) {
-      throw new RestException(e);
-    }
+  public String text() throws RestException, IOException {
+    checkResponse();
+    final String result = slurp(connection.getInputStream());
+    connection.disconnect();
+    return result;
   }
 
   /**
    * Complete the rest call and return what the server sent back as parsed JSON.
    */
-  public JsonNode json() throws RestException {
-    try {
-      checkResponse();
-      final InputStream input = connection.getInputStream();
-      final ObjectMapper mapper = new ObjectMapper();
-      final JsonNode root = mapper.readValue(input, JsonNode.class);
-      connection.disconnect();
-      return root;
-    } catch (IOException e) {
-      throw new RestException(e);
-    }
+  public JsonNode json() throws RestException, IOException {
+    checkResponse();
+    final InputStream input = connection.getInputStream();
+    final ObjectMapper mapper = new ObjectMapper();
+    final JsonNode root = mapper.readValue(input, JsonNode.class);
+    connection.disconnect();
+    return root;
   }
 
-  public InputStream stream() throws RestException {
-    try {
-      checkResponse();
-    } catch (IOException e) {
-      throw new RestException(e);
-    }
+  public InputStream stream() throws RestException, IOException {
+    checkResponse();
     return connection.getInputStream();
   }
 
   private void checkResponse() throws RestException, IOException {
     connection.connect();
     final int code = connection.getResponseCode();
-    final String msg = connection.getResponseMessage();
 
     if (200 <= code && code < 300) {
       return; // success!
     }
 
+    final String msg = connection.getResponseMessage();
     final String error = slurp(connection.getErrorStream());
     throw new RestException(code, msg, error);
   }

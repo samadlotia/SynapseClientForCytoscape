@@ -17,33 +17,8 @@ class RestException extends Exception {
     this.response = response;
   }
 
-  public RestException(final String msg) {
-    super(msg);
-    this.code = 0;
-    this.msg = null;
-    this.response = null;
-  }
-
-  public RestException(final String msg, final Throwable t) {
-    super(msg, t);
-    this.code = 0;
-    this.msg = null;
-    this.response = null;
-  }
-
-  public RestException(final IOException e) {
-    this("Low-level I/O exception with server", e);
-  }
-
-  public int getCode() {
-    return code;
-  }
-
   public String toString() {
-    if (msg != null)
-      return String.format("%d - %s: %s", code, msg, response);
-    else
-      return super.toString();
+    return String.format("%d - %s: %s", code, msg, response);
   }
 }
 

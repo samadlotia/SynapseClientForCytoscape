@@ -27,6 +27,11 @@ class RestCall {
     public void headers(RestCall c);
   }
 
+  /**
+   * This class does not call {@code disconnect} on the {@code connection},
+   * as doing so eliminates the benefit of reusing the underlying
+   * socket in subsequent rest calls.
+   */
   final HttpURLConnection connection;
 
   private RestCall(String url) throws MalformedURLException, IOException {
@@ -85,39 +90,38 @@ class RestCall {
    * Complete the rest call but ignore anything the server sends back.
    * @throws RestException unsuccessful http request, i.e. non 2xx response
    */
-  public void nothing() throws RestException, IOException {
-    checkResponse();
-    connection.disconnect();
+  public void done() throws RestException, IOException {
+    connectAndCheckResponse();
   }
 
   /**
    * Complete the rest call and return what the server sent back as a string.
    */
   public String text() throws RestException, IOException {
-    checkResponse();
-    final String result = slurp(connection.getInputStream());
-    connection.disconnect();
-    return result;
+    connectAndCheckResponse();
+    return slurp(connection.getInputStream());
   }
 
   /**
    * Complete the rest call and return what the server sent back as parsed JSON.
    */
   public JsonNode json() throws RestException, IOException {
-    checkResponse();
+    connectAndCheckResponse();
     final InputStream input = connection.getInputStream();
     final ObjectMapper mapper = new ObjectMapper();
-    final JsonNode root = mapper.readValue(input, JsonNode.class);
-    connection.disconnect();
-    return root;
+    return mapper.readValue(input, JsonNode.class);
   }
 
+  /**
+   * Complete the rest call and return what the server is sending back as an {@code InputStream}.
+   * It is the caller's responsibility to call {@code close()} on the {@code InputStream}.
+   */
   public InputStream stream() throws RestException, IOException {
-    checkResponse();
+    connectAndCheckResponse();
     return connection.getInputStream();
   }
 
-  private void checkResponse() throws RestException, IOException {
+  private void connectAndCheckResponse() throws RestException, IOException {
     connection.connect();
     final int code = connection.getResponseCode();
 

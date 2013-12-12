@@ -21,7 +21,7 @@ abstract class Auth implements RestCall.HeaderAdder {
    */
   public abstract void headers(RestCall c);
 
-  public static Auth withAPIKey(final String userId, final String apiKey) {
+  public static Auth withAPIKey(final String userId, final String apiKey) throws InvalidKeyException {
     return new APIKeyAuth(userId, apiKey);
   }
 
@@ -32,19 +32,25 @@ abstract class Auth implements RestCall.HeaderAdder {
     final String userId;
     final Mac mac;
 
-    public APIKeyAuth(final String userId, final String apiKey) {
+    public APIKeyAuth(final String userId, final String apiKey) throws InvalidKeyException {
       this.userId = userId;
 
       // initialize mac with the given api key as its secret key
-      final byte[] keyBytes = DatatypeConverter.parseBase64Binary(apiKey);
+      byte[] keyBytes = null;
+      try {
+        keyBytes = DatatypeConverter.parseBase64Binary(apiKey);
+      } catch (IllegalArgumentException e) {
+        throw new InvalidKeyException("Incorrect key length", e);
+      } catch (ArrayIndexOutOfBoundsException e) { // com.sun.xml.bind.DatatypeConverterImpl.parseBase64Binary incorrectly throws this if the key length is invalid
+        throw new InvalidKeyException("Incorrect key length", e);
+      }
+
       try {
         final SecretKeySpec keySpec = new SecretKeySpec(keyBytes, CRYPT_ALGO);
         mac = Mac.getInstance(CRYPT_ALGO);
         mac.init(keySpec);
       } catch (NoSuchAlgorithmException e) {
-        throw new IllegalStateException("CRYPT_ALGO is invalid: " + CRYPT_ALGO, e);
-      } catch (InvalidKeyException e) {
-        throw new IllegalArgumentException("apiKey is invalid" + apiKey, e);
+        throw new IllegalStateException("Algorithm defined in CRYPT_ALGO is invalid: " + CRYPT_ALGO, e);
       }
     }
 

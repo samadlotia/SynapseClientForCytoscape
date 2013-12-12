@@ -10,7 +10,7 @@ public class LoginTask implements Task {
   @Tunable(description="User Email", gravity=1.0)
   public String userId;
 
-  @Tunable(description="Synapse API Key", gravity=2.0)
+  @Tunable(description="API Key", gravity=2.0)
   public String apiKey;
 
   public LoginTask(final AuthCacheMgr authCacheMgr) {
@@ -19,13 +19,12 @@ public class LoginTask implements Task {
     this.apiKey = authCacheMgr.getAPIKey();
   }
 
-  public void run(TaskMonitor monitor) {
+  public void run(TaskMonitor monitor) throws Exception {
     if (userId.length() != 0 && apiKey.length() != 0) {
       monitor.setTitle("Synapse log in");
       monitor.setStatusMessage("Retrieving user profile");
 
       SynapseClient.loginWithAPIKey(userId, apiKey);
-      monitor.setStatusMessage("Welcome, " + SynapseClient.get().getUserDisplayName() + "!");
     }
     authCacheMgr.setUserIDAPIKey(userId, apiKey);
   }

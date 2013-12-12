@@ -35,6 +35,10 @@ class RestException extends Exception {
     this("Low-level I/O exception with server", e);
   }
 
+  public int getCode() {
+    return code;
+  }
+
   public String toString() {
     if (msg != null)
       return String.format("%d - %s: %s", code, msg, response);

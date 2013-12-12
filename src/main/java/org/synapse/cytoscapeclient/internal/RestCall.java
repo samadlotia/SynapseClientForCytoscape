@@ -86,7 +86,7 @@ class RestCall {
    * Complete the rest call but ignore anything the server sends back.
    * @throws RestException failure to communicate with server or unsuccessful http request, i.e. non 2xx response
    */
-  public void done() throws RestException {
+  public void nothing() throws RestException {
     try {
       checkResponse();
       connection.disconnect();
@@ -98,7 +98,7 @@ class RestCall {
   /**
    * Complete the rest call and return what the server sent back as a string.
    */
-  public String asText() throws RestException {
+  public String text() throws RestException {
     try {
       checkResponse();
       final String result = slurp(connection.getInputStream());
@@ -112,7 +112,7 @@ class RestCall {
   /**
    * Complete the rest call and return what the server sent back as parsed JSON.
    */
-  public JsonNode asJson() throws RestException {
+  public JsonNode json() throws RestException {
     try {
       checkResponse();
       final InputStream input = connection.getInputStream();

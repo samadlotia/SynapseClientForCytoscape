@@ -7,10 +7,10 @@ import org.cytoscape.work.TaskMonitor;
 public class LoginTask implements Task {
   final AuthCacheMgr authCacheMgr;
 
-  @Tunable(description="User Email")
+  @Tunable(description="User Email", gravity=1.0)
   public String userId;
 
-  @Tunable(description="Synapse API Key")
+  @Tunable(description="Synapse API Key", gravity=2.0)
   public String apiKey;
 
   public LoginTask(final AuthCacheMgr authCacheMgr) {
@@ -24,8 +24,8 @@ public class LoginTask implements Task {
       monitor.setTitle("Synapse log in");
       monitor.setStatusMessage("Retrieving user profile");
 
-      final SynapseClient c = SynapseClient.loginWithAPIKey(userId, apiKey);
-      monitor.setStatusMessage("Welcome, " + c.getUserDisplayName() + "!");
+      SynapseClient.loginWithAPIKey(userId, apiKey);
+      monitor.setStatusMessage("Welcome, " + SynapseClient.get().getUserDisplayName() + "!");
     }
     authCacheMgr.setUserIDAPIKey(userId, apiKey);
   }

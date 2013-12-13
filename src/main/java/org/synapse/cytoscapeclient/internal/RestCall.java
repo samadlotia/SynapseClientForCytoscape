@@ -29,8 +29,7 @@ class RestCall {
 
   /**
    * This class does not call {@code disconnect} on the {@code connection},
-   * as doing so eliminates the benefit of reusing the underlying
-   * socket in subsequent rest calls.
+   * which would prevent reusing the underlying socket in subsequent rest calls.
    */
   final HttpURLConnection connection;
 
@@ -42,13 +41,22 @@ class RestCall {
   /**
    * Start a Rest call to the given URL.
    */
-  public static RestCall to(final String urlFmt, Object... args) throws RestException, IOException {
-    final String urlStr = (args.length == 0) ? urlFmt : String.format(urlFmt, args);
+  public static RestCall to(final String... urlPieces) throws RestException, IOException {
+    final String urlStr = join(urlPieces);
     try {
       return new RestCall(urlStr);
     } catch (MalformedURLException e) {
       throw new IllegalArgumentException("URL is not valid: " + urlStr, e);
     }
+  }
+
+  private static String join(String[] pieces) {
+    final int len = pieces.length;
+    final StringBuffer buffer = new StringBuffer();
+    for (int i = 0; i < len; i++) {
+      buffer.append(pieces[i]);
+    }
+    return buffer.toString();
   }
 
   /**

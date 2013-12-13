@@ -2,20 +2,14 @@ package org.synapse.cytoscapeclient.internal;
 
 import java.io.InputStream;
 import java.io.IOException;
-import org.cytoscape.io.read.CyNetworkReaderManager;
-import org.cytoscape.io.read.CyNetworkReader;
-import org.cytoscape.model.CyNetwork;
-import org.cytoscape.model.CyNetworkManager;
-import org.cytoscape.view.model.CyNetworkViewManager;
-import org.cytoscape.view.model.CyNetworkView;
+import org.cytoscape.io.read.CyTableReaderManager;
+import org.cytoscape.model.CyTable;
 import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.Tunable;
 import org.cytoscape.work.TaskMonitor;
 
-public class ImportNetworkFromSynapseTask extends AbstractTask {
-  final CyNetworkManager networkMgr;
-  final CyNetworkViewManager networkViewMgr;
-  final CyNetworkReaderManager networkReaderMgr;
+public class ImportTableFromSynapseTask extends AbstractTask {
+  final CyTableReaderManager tableReaderMgr;
 
   @Tunable(description="Synapse ID", gravity=1.0)
   public String entityId;
@@ -23,17 +17,16 @@ public class ImportNetworkFromSynapseTask extends AbstractTask {
   volatile InputStream fileContents = null;
   volatile boolean cancelled = false;
 
-  public ImportNetworkFromSynapseTask(final CyNetworkManager networkMgr, final CyNetworkViewManager networkViewMgr, final CyNetworkReaderManager networkReaderMgr) {
-    this.networkMgr = networkMgr;
-    this.networkViewMgr = networkViewMgr;
-    this.networkReaderMgr = networkReaderMgr;
+  public ImportTableFromSynapseTask(final CyTableReaderManager tableReaderMgr) {
+    this.tableReaderMgr = tableReaderMgr;
   }
 
   public void run(TaskMonitor monitor) throws Exception {
     if (entityId == null || entityId.length() == 0)
       return;
 
-    monitor.setTitle("Import network from Synapse");
+    /*
+    monitor.setTitle("Import table from Synapse");
     monitor.setStatusMessage("Getting entity information");
     final SynapseClient.File file = SynapseClient.get().getFile(entityId);
     fileContents = file.getContents();
@@ -64,14 +57,17 @@ public class ImportNetworkFromSynapseTask extends AbstractTask {
         cancelled = true;
       }
     });
+    */
   }
 
   public void cancel() {
+    /*
     cancelled = true;
     if (fileContents != null) {
       try {
         fileContents.close();
       } catch (IOException e) {}
     }
+    */
   }
 }

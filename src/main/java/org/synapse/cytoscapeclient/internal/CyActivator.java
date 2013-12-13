@@ -6,6 +6,7 @@ import org.osgi.framework.BundleContext;
 
 import org.cytoscape.application.CyApplicationConfiguration;
 import org.cytoscape.io.read.CyNetworkReaderManager;
+import org.cytoscape.io.read.CyTableReaderManager;
 import org.cytoscape.model.CyNetworkManager;
 import org.cytoscape.service.util.AbstractCyActivator;
 import org.cytoscape.view.model.CyNetworkViewManager;
@@ -19,6 +20,7 @@ public class CyActivator extends AbstractCyActivator {
     final CyNetworkManager networkMgr = getService(bc, CyNetworkManager.class);
     final CyNetworkViewManager networkViewMgr = getService(bc, CyNetworkViewManager.class);
     final CyNetworkReaderManager networkReaderMgr = getService(bc, CyNetworkReaderManager.class);
+    final CyTableReaderManager tableReaderMgr = getService(bc, CyTableReaderManager.class);
     final CyApplicationConfiguration cyAppConf = getService(bc, CyApplicationConfiguration.class);
 
     final AuthCacheMgr authCacheMgr = new AuthCacheMgr(cyAppConf.getAppConfigurationDirectoryLocation(this.getClass()));
@@ -31,6 +33,11 @@ public class CyActivator extends AbstractCyActivator {
     registerService(bc, new ImportNetworkFromSynapseTaskFactory(networkMgr, networkViewMgr, networkReaderMgr), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "From Synapse...",
       ServiceProperties.PREFERRED_MENU, "File.Import.Network"
+    ));
+
+    registerService(bc, new ImportTableFromSynapseTaskFactory(tableReaderMgr), TaskFactory.class, ezProps(
+      ServiceProperties.TITLE, "From Synapse...",
+      ServiceProperties.PREFERRED_MENU, "File.Import.Table"
     ));
   }
 

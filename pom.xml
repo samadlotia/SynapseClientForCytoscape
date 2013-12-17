@@ -43,6 +43,7 @@
             	<artifactSet>
             		<includes>
             			<include>com.fasterxml.jackson.core:jackson-databind</include>
+            			<include>org.apache.httpcomponents:httpclient</include>
             		</includes>
             	</artifactSet>
             	<minimizeJar>true</minimizeJar>
@@ -162,7 +163,11 @@
 			<artifactId>jackson-databind</artifactId>
 			<version>2.2.2</version>
 		</dependency>
-
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+			<version>4.3.1</version>
+		</dependency>
 	</dependencies>
 
 </project>

@@ -24,7 +24,7 @@
             <Bundle-SymbolicName>${bundle.pkg}</Bundle-SymbolicName>
             <Bundle-Version>${project.version}</Bundle-Version>
             <Export-Package>!${bundle.pkg}.internal.*</Export-Package>
-            <Private-Package>${bundle.pkg}.*,com.fasterxml.*</Private-Package>
+            <Private-Package>${bundle.pkg}.*,com.fasterxml.*,org.apache.http.*,org.apache.commons.codec.*</Private-Package>
             <Bundle-Activator>${bundle.pkg}.internal.CyActivator</Bundle-Activator>
 					</instructions>
 				</configuration>
@@ -40,12 +40,6 @@
               <goal>shade</goal>
             </goals>
             <configuration>
-            	<artifactSet>
-            		<includes>
-            			<include>com.fasterxml.jackson.core:jackson-databind</include>
-            			<include>org.apache.httpcomponents:httpclient</include>
-            		</includes>
-            	</artifactSet>
             	<minimizeJar>true</minimizeJar>
             </configuration>
           </execution>
@@ -165,9 +159,8 @@
 		</dependency>
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
-			<artifactId>httpclient</artifactId>
-			<version>4.3.1</version>
+			<artifactId>httpasyncclient</artifactId>
+			<version>4.0</version>
 		</dependency>
 	</dependencies>
-
 </project>

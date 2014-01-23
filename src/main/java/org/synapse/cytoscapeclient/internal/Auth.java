@@ -12,6 +12,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.InvalidKeyException;
 
 import javax.xml.bind.DatatypeConverter;
+import org.apache.commons.codec.binary.Base64;
 
 abstract class Auth implements RestCall.HeaderAdder {
   private Auth() {}
@@ -36,14 +37,7 @@ abstract class Auth implements RestCall.HeaderAdder {
       this.userId = userId;
 
       // convert apiKey base64 string into a byte array
-      byte[] keyBytes = null;
-      try {
-        keyBytes = DatatypeConverter.parseBase64Binary(apiKey);
-      } catch (IllegalArgumentException e) {
-        throw new InvalidKeyException("Incorrect key length", e);
-      } catch (ArrayIndexOutOfBoundsException e) { // com.sun.xml.bind.DatatypeConverterImpl.parseBase64Binary incorrectly throws this if the key length is invalid
-        throw new InvalidKeyException("Incorrect key length", e);
-      }
+      final byte[] keyBytes = Base64.decodeBase64(apiKey);
 
       // initialize mac with the given api key as its secret key
       try {

@@ -1,5 +1,6 @@
 package org.synapse.cytoscapeclient.internal;
 
+import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
 import org.cytoscape.io.read.CyTableReader;
@@ -28,13 +29,12 @@ public class ImportTableFromSynapseTask extends AbstractTask {
 
     monitor.setTitle("Import table from Synapse");
     monitor.setStatusMessage("Getting entity information");
-    final SynapseClient.File file = SynapseClient.get().getFile(entityId);
-    fileContents = file.getContents();
+    final SynapseClient.SynFile file = SynapseClient.get().getFile(entityId);
 
-    monitor.setStatusMessage("Reading Synapse file: " + file.getName());
-    final CyTableReader tableReader = tableReaderMgr.getReader(file.getContents(), file.getName());
+    monitor.setStatusMessage("Reading Synapse file: " + file.name);
+    final CyTableReader tableReader = tableReaderMgr.getReader(file.file.toURI(), file.name);
     if (tableReader == null)
-      throw new Exception("Unsupported table file type: " + file.getName());
+      throw new Exception("Unsupported table file type: " + file.name);
 
     super.insertTasksAfterCurrentTask(tableReader, new AbstractTask() {
       volatile boolean cancelled = false;

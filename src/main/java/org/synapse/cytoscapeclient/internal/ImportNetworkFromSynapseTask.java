@@ -1,5 +1,6 @@
 package org.synapse.cytoscapeclient.internal;
 
+import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
 import org.cytoscape.io.read.CyNetworkReaderManager;
@@ -35,13 +36,12 @@ public class ImportNetworkFromSynapseTask extends AbstractTask {
 
     monitor.setTitle("Import network from Synapse");
     monitor.setStatusMessage("Getting entity information");
-    final SynapseClient.File file = SynapseClient.get().getFile(entityId);
-    fileContents = file.getContents();
+    final SynapseClient.SynFile file = SynapseClient.get().getFile(entityId);
 
-    monitor.setStatusMessage("Reading Synapse file: " + file.getName());
-    final CyNetworkReader networkReader = networkReaderMgr.getReader(file.getContents(), file.getName());
+    monitor.setStatusMessage("Reading Synapse file: " + file.name);
+    final CyNetworkReader networkReader = networkReaderMgr.getReader(file.file.toURI(), file.name);
     if (networkReader == null)
-      throw new Exception("Unsupported network file type: " + file.getName());
+      throw new Exception("Unsupported network file type: " + file.name);
 
     super.insertTasksAfterCurrentTask(networkReader, new AbstractTask() {
       volatile boolean cancelled = false;

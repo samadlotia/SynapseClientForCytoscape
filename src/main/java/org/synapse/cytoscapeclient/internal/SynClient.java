@@ -1,4 +1,4 @@
-package org.synapse.cytoscapeclient.internal.nau;
+package org.synapse.cytoscapeclient.internal;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,8 +21,8 @@ import org.cytoscape.work.TaskMonitor;
 
 public class SynClient {
   public static class SynFile {
-    public final File file;
-    public final String name;
+    final File file;
+    final String name;
 
     public SynFile(File file, String name) {
       this.file = file;
@@ -76,21 +76,31 @@ public class SynClient {
     }
   }
 
-  public MaybeTask<String> newGetOwnerTask() {
-    return new MaybeTask<String>() {
-      HttpUriRequest req = null;
+  abstract class ReqTask<T> extends MaybeTask<T> {
+    volatile HttpUriRequest req = null;
 
+    protected HttpResponse exec(final HttpUriRequest req) throws IOException {
+      this.req = req;
+      final HttpResponse resp = client.execute(req);
+      this.req = null;
+      return resp;
+    }
+
+    protected void innerCancel() {
+      final HttpUriRequest req2 = this.req; // copy the reference to req to prevent it from becoming null while trying to abort it
+      if (req2 != null) {
+        req2.abort();
+      }
+    }
+  }
+
+  public MaybeTask<String> newGetOwnerTask() {
+    return new ReqTask<String>() {
       protected String checkedRun(final TaskMonitor monitor) throws Exception {
-        req = new HttpGet(join(REPO_ENDPOINT, "/userProfile/"));
-        final HttpResponse resp = client.execute(req);
+        monitor.setStatusMessage("Attempting to retrieve login credentials");
+        final HttpResponse resp = super.exec(new HttpGet(join(REPO_ENDPOINT, "/userProfile/")));
         final JsonNode root = toJson(resp);
         return root.get("ownerId").asText();
-      }
-
-      protected void innerCancel() {
-        if (req != null) {
-          req.abort();
-        }
       }
     };
   }
@@ -109,13 +119,13 @@ public class SynClient {
   static final int BLOCK_SIZE = 64 * 1024;
 
   public MaybeTask<SynFile> newGetFileTask(final String entityId) {
-    return new MaybeTask<SynFile>() {
-      HttpUriRequest req = null;
-
+    return new ReqTask<SynFile>() {
       protected SynFile checkedRun(final TaskMonitor monitor) throws Exception {
+        monitor.setProgress(-1);
+
         // get info about the entity
-        req = new HttpGet(join(REPO_ENDPOINT, "/entity/", entityId, "/bundle?mask=1"));
-        final JsonNode entityInfo = toJson(client.execute(req));
+        monitor.setStatusMessage("Retrieving entity info");
+        final JsonNode entityInfo = toJson(super.exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", entityId, "/bundle?mask=1"))));
 
         // ensure that it's a file
         final String entityType = entityInfo.get("entityType").asText();
@@ -127,31 +137,32 @@ public class SynClient {
         final String version = entityInfo.get("entity").get("versionLabel").asText();
 
         // request the file itself
-        req = new HttpGet(join(REPO_ENDPOINT, "/entity/", entityId, "/version/", version, "/file"));
-        final HttpResponse resp = client.execute(req);
+        monitor.setStatusMessage("Downloading file");
+        final HttpResponse resp = super.exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", entityId, "/version/", version, "/file")));
         ensureResponse(resp);
 
         // download the file to a temp
         final File file = newTempFile(filename);
         final InputStream input = resp.getEntity().getContent();
+        final long totalLen = resp.getEntity().getContentLength();
         final FileOutputStream output = new FileOutputStream(file);
         final byte[] buffer = new byte[BLOCK_SIZE];
+        long readLen = 0;
         while (!super.cancelled) {
           final int len = input.read(buffer);
           if (len < 0)
             break;
           output.write(buffer, 0, len);
+
+          readLen += len;
+          if (totalLen >= 0L) {
+            monitor.setProgress(((double) readLen) / ((double) totalLen));
+          }
         }
         output.close();
         input.close();
 
         return new SynFile(file, filename);
-      }
-
-      protected void innerCancel() {
-        if (req != null) {
-          req.abort();
-        }
       }
     };
   }

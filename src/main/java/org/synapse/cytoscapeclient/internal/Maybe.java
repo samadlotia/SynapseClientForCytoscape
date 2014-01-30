@@ -1,11 +1,13 @@
-package org.synapse.cytoscapeclient.internal.nau;
+package org.synapse.cytoscapeclient.internal;
 
 public class Maybe<V> {
+  /*
   static enum Status {
     SUCCEEDED,
     CANCELLED,
     FAILED
   }
+  */
 
   V           result    = null;
   boolean     cancelled = false;
@@ -33,6 +35,7 @@ public class Maybe<V> {
     return new Maybe<V>(null, false, exception);
   }
 
+  /*
   public Status status() {
     if (result != null) {
       return Status.SUCCEEDED;
@@ -44,6 +47,7 @@ public class Maybe<V> {
       }
     }
   }
+  */
 
   public V get() throws Exception {
     if (exception != null)
@@ -51,7 +55,9 @@ public class Maybe<V> {
     return cancelled ? null : result;
   }
 
+  /*
   public Exception whyItFailed() {
     return exception;
   }
+  */
 }

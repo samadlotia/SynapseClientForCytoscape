@@ -23,19 +23,20 @@ public class CyActivator extends AbstractCyActivator {
     final CyTableReaderManager tableReaderMgr = getService(bc, CyTableReaderManager.class);
     final CyApplicationConfiguration cyAppConf = getService(bc, CyApplicationConfiguration.class);
 
+    final SynClientMgr clientMgr = new SynClientMgr();
     final AuthCacheMgr authCacheMgr = new AuthCacheMgr(cyAppConf.getAppConfigurationDirectoryLocation(this.getClass()));
 
-    registerService(bc, new LoginTaskFactory(authCacheMgr), TaskFactory.class, ezProps(
+    registerService(bc, new LoginTaskFactory(clientMgr, authCacheMgr), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "Login...",
       ServiceProperties.PREFERRED_MENU, "Apps.Synapse"
     ));
 
-    registerService(bc, new ImportNetworkFromSynapseTaskFactory(networkMgr, networkViewMgr, networkReaderMgr, authCacheMgr), TaskFactory.class, ezProps(
+    registerService(bc, new ImportNetworkFromSynapseTaskFactory(networkMgr, networkViewMgr, networkReaderMgr, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "From Synapse...",
       ServiceProperties.PREFERRED_MENU, "File.Import.Network"
     ));
 
-    registerService(bc, new ImportTableFromSynapseTaskFactory(tableReaderMgr), TaskFactory.class, ezProps(
+    registerService(bc, new ImportTableFromSynapseTaskFactory(tableReaderMgr, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "From Synapse...",
       ServiceProperties.PREFERRED_MENU, "File.Import.Table"
     ));

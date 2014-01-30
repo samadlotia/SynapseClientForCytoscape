@@ -1,4 +1,4 @@
-package org.synapse.cytoscapeclient.internal.nau;
+package org.synapse.cytoscapeclient.internal;
 
 class SynClientException extends Exception {
   public SynClientException(final String msg) {

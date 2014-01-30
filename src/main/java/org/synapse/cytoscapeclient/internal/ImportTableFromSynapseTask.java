@@ -11,6 +11,7 @@ import org.cytoscape.work.Tunable;
 import org.cytoscape.work.TaskMonitor;
 
 public class ImportTableFromSynapseTask extends AbstractTask {
+  final SynClientMgr clientMgr;
   final CyTableReaderManager tableReaderMgr;
 
   @Tunable(description="Synapse ID", gravity=1.0)
@@ -19,7 +20,8 @@ public class ImportTableFromSynapseTask extends AbstractTask {
   volatile InputStream fileContents = null;
   volatile boolean cancelled = false;
 
-  public ImportTableFromSynapseTask(final CyTableReaderManager tableReaderMgr) {
+  public ImportTableFromSynapseTask(final SynClientMgr clientMgr, final CyTableReaderManager tableReaderMgr) {
+    this.clientMgr = clientMgr;
     this.tableReaderMgr = tableReaderMgr;
   }
 
@@ -27,14 +29,22 @@ public class ImportTableFromSynapseTask extends AbstractTask {
     if (entityId == null || entityId.length() == 0)
       return;
 
+    final SynClient client = clientMgr.get();
+    if (client == null) { // not logged in, so just exit
+      return;
+    }
+
     monitor.setTitle("Import table from Synapse");
     monitor.setStatusMessage("Getting entity information");
-    final SynapseClient.SynFile file = SynapseClient.get().getFile(entityId);
+    final SynClient.SynFile file = client.newGetFileTask(entityId).run(monitor).get();
+    if (file == null) { // user cancelled, so exit
+      return;
+    }
 
-    monitor.setStatusMessage("Reading Synapse file: " + file.name);
-    final CyTableReader tableReader = tableReaderMgr.getReader(file.file.toURI(), file.name);
+    monitor.setStatusMessage("Reading Synapse file: " + file.getName());
+    final CyTableReader tableReader = tableReaderMgr.getReader(file.getFile().toURI(), file.getName());
     if (tableReader == null)
-      throw new Exception("Unsupported table file type: " + file.name);
+      throw new Exception("Unsupported table file type: " + file.getName());
 
     super.insertTasksAfterCurrentTask(tableReader, new AbstractTask() {
       volatile boolean cancelled = false;

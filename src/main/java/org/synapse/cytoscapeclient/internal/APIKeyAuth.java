@@ -1,4 +1,4 @@
-package org.synapse.cytoscapeclient.internal.nau;
+package org.synapse.cytoscapeclient.internal;
 
 
 import java.util.Date;

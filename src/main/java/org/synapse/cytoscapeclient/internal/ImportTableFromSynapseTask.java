@@ -6,13 +6,15 @@ import java.io.IOException;
 import org.cytoscape.io.read.CyTableReader;
 import org.cytoscape.io.read.CyTableReaderManager;
 import org.cytoscape.model.CyTable;
+import org.cytoscape.model.CyTableManager;
 import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.Tunable;
 import org.cytoscape.work.TaskMonitor;
 
 public class ImportTableFromSynapseTask extends AbstractTask {
-  final SynClientMgr clientMgr;
+  final CyTableManager tableMgr;
   final CyTableReaderManager tableReaderMgr;
+  final SynClientMgr clientMgr;
 
   @Tunable(description="Synapse ID", gravity=1.0)
   public String entityId;
@@ -20,9 +22,10 @@ public class ImportTableFromSynapseTask extends AbstractTask {
   volatile InputStream fileContents = null;
   volatile boolean cancelled = false;
 
-  public ImportTableFromSynapseTask(final SynClientMgr clientMgr, final CyTableReaderManager tableReaderMgr) {
-    this.clientMgr = clientMgr;
+  public ImportTableFromSynapseTask(final CyTableManager tableMgr, final CyTableReaderManager tableReaderMgr, final SynClientMgr clientMgr) {
+    this.tableMgr = tableMgr;
     this.tableReaderMgr = tableReaderMgr;
+    this.clientMgr = clientMgr;
   }
 
   public void run(TaskMonitor monitor) throws Exception {
@@ -49,6 +52,9 @@ public class ImportTableFromSynapseTask extends AbstractTask {
     super.insertTasksAfterCurrentTask(tableReader, new AbstractTask() {
       volatile boolean cancelled = false;
       public void run(TaskMonitor monitor) throws Exception {
+        for (final CyTable table : tableReader.getTables()) {
+          tableMgr.addTable(table);
+        }
       }
 
       public void cancel() {

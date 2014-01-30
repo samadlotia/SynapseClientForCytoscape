@@ -8,6 +8,7 @@ import org.cytoscape.application.CyApplicationConfiguration;
 import org.cytoscape.io.read.CyNetworkReaderManager;
 import org.cytoscape.io.read.CyTableReaderManager;
 import org.cytoscape.model.CyNetworkManager;
+import org.cytoscape.model.CyTableManager;
 import org.cytoscape.service.util.AbstractCyActivator;
 import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.work.TaskFactory;
@@ -20,6 +21,7 @@ public class CyActivator extends AbstractCyActivator {
     final CyNetworkManager networkMgr = getService(bc, CyNetworkManager.class);
     final CyNetworkViewManager networkViewMgr = getService(bc, CyNetworkViewManager.class);
     final CyNetworkReaderManager networkReaderMgr = getService(bc, CyNetworkReaderManager.class);
+    final CyTableManager tableMgr = getService(bc, CyTableManager.class);
     final CyTableReaderManager tableReaderMgr = getService(bc, CyTableReaderManager.class);
     final CyApplicationConfiguration cyAppConf = getService(bc, CyApplicationConfiguration.class);
 
@@ -36,7 +38,7 @@ public class CyActivator extends AbstractCyActivator {
       ServiceProperties.PREFERRED_MENU, "File.Import.Network"
     ));
 
-    registerService(bc, new ImportTableFromSynapseTaskFactory(tableReaderMgr, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
+    registerService(bc, new ImportTableFromSynapseTaskFactory(tableMgr, tableReaderMgr, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "From Synapse...",
       ServiceProperties.PREFERRED_MENU, "File.Import.Table"
     ));

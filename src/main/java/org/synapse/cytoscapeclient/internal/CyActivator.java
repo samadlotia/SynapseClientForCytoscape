@@ -13,12 +13,14 @@ import org.cytoscape.service.util.AbstractCyActivator;
 import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.work.TaskFactory;
 import org.cytoscape.work.ServiceProperties;
+import org.cytoscape.session.CyNetworkNaming;
 
 public class CyActivator extends AbstractCyActivator {
   public void start(BundleContext bc) {
     System.out.println((new java.util.Date()).toString() + " started: " + getClass().getName());
     
     final CyNetworkManager networkMgr = getService(bc, CyNetworkManager.class);
+    final CyNetworkNaming netNaming = getService(bc, CyNetworkNaming.class);
     final CyNetworkViewManager networkViewMgr = getService(bc, CyNetworkViewManager.class);
     final CyNetworkReaderManager networkReaderMgr = getService(bc, CyNetworkReaderManager.class);
     final CyTableManager tableMgr = getService(bc, CyTableManager.class);
@@ -33,7 +35,7 @@ public class CyActivator extends AbstractCyActivator {
       ServiceProperties.PREFERRED_MENU, "Apps.Synapse"
     ));
 
-    registerService(bc, new ImportNetworkFromSynapseTaskFactory(networkMgr, networkViewMgr, networkReaderMgr, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
+    registerService(bc, new ImportNetworkFromSynapseTaskFactory(networkMgr, networkViewMgr, networkReaderMgr, netNaming, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "From Synapse...",
       ServiceProperties.PREFERRED_MENU, "File.Import.Network"
     ));

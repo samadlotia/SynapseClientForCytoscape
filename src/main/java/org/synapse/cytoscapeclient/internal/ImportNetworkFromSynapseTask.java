@@ -12,11 +12,13 @@ import org.cytoscape.view.model.CyNetworkView;
 import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.Tunable;
 import org.cytoscape.work.TaskMonitor;
+import org.cytoscape.session.CyNetworkNaming;
 
 public class ImportNetworkFromSynapseTask extends AbstractTask {
   final CyNetworkManager networkMgr;
   final CyNetworkViewManager networkViewMgr;
   final CyNetworkReaderManager networkReaderMgr;
+  final CyNetworkNaming netNaming;
   final SynClientMgr clientMgr;
   final AuthCacheMgr authCacheMgr;
 
@@ -26,10 +28,11 @@ public class ImportNetworkFromSynapseTask extends AbstractTask {
   volatile InputStream fileContents = null;
   volatile boolean cancelled = false;
 
-  public ImportNetworkFromSynapseTask(final CyNetworkManager networkMgr, final CyNetworkViewManager networkViewMgr, final CyNetworkReaderManager networkReaderMgr, final SynClientMgr clientMgr, final AuthCacheMgr authCacheMgr) {
+  public ImportNetworkFromSynapseTask(final CyNetworkManager networkMgr, final CyNetworkViewManager networkViewMgr, final CyNetworkReaderManager networkReaderMgr, final CyNetworkNaming netNaming, final SynClientMgr clientMgr, final AuthCacheMgr authCacheMgr) {
     this.networkMgr = networkMgr;
     this.networkViewMgr = networkViewMgr;
     this.networkReaderMgr = networkReaderMgr;
+    this.netNaming = netNaming;
     this.clientMgr = clientMgr;
     this.authCacheMgr = authCacheMgr;
   }
@@ -58,6 +61,8 @@ public class ImportNetworkFromSynapseTask extends AbstractTask {
       volatile boolean cancelled = false;
       public void run(TaskMonitor monitor) throws Exception {
         for (final CyNetwork network : networkReader.getNetworks()) {
+          network.getRow(network).set(CyNetwork.NAME, netNaming.getSuggestedNetworkTitle(file.getName()));
+
           if (cancelled)
             break;
           

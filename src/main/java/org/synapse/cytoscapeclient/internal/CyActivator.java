@@ -30,7 +30,7 @@ public class CyActivator extends AbstractCyActivator {
       ServiceProperties.PREFERRED_MENU, "Apps.Synapse"
     ));
 
-    registerService(bc, new ImportNetworkFromSynapseTaskFactory(networkMgr, networkViewMgr, networkReaderMgr), TaskFactory.class, ezProps(
+    registerService(bc, new ImportNetworkFromSynapseTaskFactory(networkMgr, networkViewMgr, networkReaderMgr, authCacheMgr), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "From Synapse...",
       ServiceProperties.PREFERRED_MENU, "File.Import.Network"
     ));

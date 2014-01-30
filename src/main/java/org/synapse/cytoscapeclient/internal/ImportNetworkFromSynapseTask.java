@@ -13,10 +13,15 @@ import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.Tunable;
 import org.cytoscape.work.TaskMonitor;
 
+import org.synapse.cytoscapeclient.internal.nau.APIKeyAuth;
+import org.synapse.cytoscapeclient.internal.nau.Maybe;
+import org.synapse.cytoscapeclient.internal.nau.SynClient;
+
 public class ImportNetworkFromSynapseTask extends AbstractTask {
   final CyNetworkManager networkMgr;
   final CyNetworkViewManager networkViewMgr;
   final CyNetworkReaderManager networkReaderMgr;
+  final AuthCacheMgr authCacheMgr;
 
   @Tunable(description="Synapse ID", gravity=1.0)
   public String entityId;
@@ -24,10 +29,11 @@ public class ImportNetworkFromSynapseTask extends AbstractTask {
   volatile InputStream fileContents = null;
   volatile boolean cancelled = false;
 
-  public ImportNetworkFromSynapseTask(final CyNetworkManager networkMgr, final CyNetworkViewManager networkViewMgr, final CyNetworkReaderManager networkReaderMgr) {
+  public ImportNetworkFromSynapseTask(final CyNetworkManager networkMgr, final CyNetworkViewManager networkViewMgr, final CyNetworkReaderManager networkReaderMgr, final AuthCacheMgr authCacheMgr) {
     this.networkMgr = networkMgr;
     this.networkViewMgr = networkViewMgr;
     this.networkReaderMgr = networkReaderMgr;
+    this.authCacheMgr = authCacheMgr;
   }
 
   public void run(TaskMonitor monitor) throws Exception {
@@ -36,7 +42,8 @@ public class ImportNetworkFromSynapseTask extends AbstractTask {
 
     monitor.setTitle("Import network from Synapse");
     monitor.setStatusMessage("Getting entity information");
-    final SynapseClient.SynFile file = SynapseClient.get().getFile(entityId);
+    //final SynapseClient.SynFile file = SynapseClient.get().getFile(entityId);
+    final SynClient.SynFile file = (new SynClient(new APIKeyAuth(authCacheMgr.getUserID(), authCacheMgr.getAPIKey()))).newGetFileTask(entityId).run(monitor).get();
 
     monitor.setStatusMessage("Reading Synapse file: " + file.name);
     final CyNetworkReader networkReader = networkReaderMgr.getReader(file.file.toURI(), file.name);

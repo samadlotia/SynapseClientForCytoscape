@@ -11,15 +11,17 @@ public class ImportNetworkFromSynapseTaskFactory extends AbstractTaskFactory {
   final CyNetworkManager networkMgr;
   final CyNetworkViewManager networkViewMgr;
   final CyNetworkReaderManager networkReaderMgr;
+  final AuthCacheMgr authCacheMgr;
 
-  public ImportNetworkFromSynapseTaskFactory(final CyNetworkManager networkMgr, final CyNetworkViewManager networkViewMgr, final CyNetworkReaderManager networkReaderMgr) {
+  public ImportNetworkFromSynapseTaskFactory(final CyNetworkManager networkMgr, final CyNetworkViewManager networkViewMgr, final CyNetworkReaderManager networkReaderMgr, final AuthCacheMgr authCacheMgr) {
     this.networkMgr = networkMgr;
     this.networkViewMgr = networkViewMgr;
     this.networkReaderMgr = networkReaderMgr;
+    this.authCacheMgr = authCacheMgr;
   }
 
   public TaskIterator createTaskIterator() {
-    return new TaskIterator(new ImportNetworkFromSynapseTask(networkMgr, networkViewMgr, networkReaderMgr));
+    return new TaskIterator(new ImportNetworkFromSynapseTask(networkMgr, networkViewMgr, networkReaderMgr, authCacheMgr));
   }
 
   public boolean isReady() {

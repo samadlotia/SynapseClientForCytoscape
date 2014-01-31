@@ -3,28 +3,23 @@ package org.synapse.cytoscapeclient.internal;
 import java.io.File;
 import java.io.InputStream;
 import java.io.IOException;
-import org.cytoscape.io.read.CyTableReader;
-import org.cytoscape.io.read.CyTableReaderManager;
-import org.cytoscape.model.CyTable;
-import org.cytoscape.model.CyTableManager;
 import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.Tunable;
 import org.cytoscape.work.TaskMonitor;
+import org.cytoscape.task.read.LoadTableFileTaskFactory;
 
 public class ImportTableFromSynapseTask extends AbstractTask {
-  final CyTableManager tableMgr;
-  final CyTableReaderManager tableReaderMgr;
+  final LoadTableFileTaskFactory loadTableFileTF;
   final SynClientMgr clientMgr;
 
   @Tunable(description="Synapse ID", gravity=1.0)
   public String entityId;
 
-  volatile InputStream fileContents = null;
+  volatile MaybeTask<SynClient.SynFile> task = null;
   volatile boolean cancelled = false;
 
-  public ImportTableFromSynapseTask(final CyTableManager tableMgr, final CyTableReaderManager tableReaderMgr, final SynClientMgr clientMgr) {
-    this.tableMgr = tableMgr;
-    this.tableReaderMgr = tableReaderMgr;
+  public ImportTableFromSynapseTask(final LoadTableFileTaskFactory loadTableFileTF, final SynClientMgr clientMgr) {
+    this.loadTableFileTF = loadTableFileTF;
     this.clientMgr = clientMgr;
   }
 
@@ -39,36 +34,20 @@ public class ImportTableFromSynapseTask extends AbstractTask {
 
     monitor.setTitle("Import table from Synapse");
     monitor.setStatusMessage("Getting entity information");
-    final SynClient.SynFile file = client.newGetFileTask(entityId).run(monitor).get();
+    task = client.newGetFileTask(entityId);
+    final SynClient.SynFile file = task.run(monitor).get();
+    task = null;
     if (file == null) { // user cancelled, so exit
       return;
     }
 
-    monitor.setStatusMessage("Reading Synapse file: " + file.getName());
-    final CyTableReader tableReader = tableReaderMgr.getReader(file.getFile().toURI(), file.getName());
-    if (tableReader == null)
-      throw new Exception("Unsupported table file type: " + file.getName());
-
-    super.insertTasksAfterCurrentTask(tableReader, new AbstractTask() {
-      volatile boolean cancelled = false;
-      public void run(TaskMonitor monitor) throws Exception {
-        for (final CyTable table : tableReader.getTables()) {
-          tableMgr.addTable(table);
-        }
-      }
-
-      public void cancel() {
-        cancelled = true;
-      }
-    });
+    super.insertTasksAfterCurrentTask(loadTableFileTF.createTaskIterator(file.getFile()));
   }
 
   public void cancel() {
     cancelled = true;
-    if (fileContents != null) {
-      try {
-        fileContents.close();
-      } catch (IOException e) {}
+    if (task != null) {
+      task.cancel();
     }
   }
 }

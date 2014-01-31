@@ -1,26 +1,17 @@
 package org.synapse.cytoscapeclient.internal;
 
-import org.cytoscape.io.read.CyNetworkReaderManager;
-import org.cytoscape.model.CyNetworkManager;
-import org.cytoscape.view.model.CyNetworkViewManager;
-import org.cytoscape.session.CyNetworkNaming;
+import org.cytoscape.task.read.LoadNetworkFileTaskFactory;
 
 import org.cytoscape.work.AbstractTaskFactory;
 import org.cytoscape.work.TaskIterator;
 
 public class ImportNetworkFromSynapseTaskFactory extends AbstractTaskFactory {
-  final CyNetworkManager networkMgr;
-  final CyNetworkViewManager networkViewMgr;
-  final CyNetworkReaderManager networkReaderMgr;
+  final LoadNetworkFileTaskFactory loadNetworkFileTF;
   final SynClientMgr clientMgr;
   final AuthCacheMgr authCacheMgr;
-  final CyNetworkNaming netNaming;
 
-  public ImportNetworkFromSynapseTaskFactory(final CyNetworkManager networkMgr, final CyNetworkViewManager networkViewMgr, final CyNetworkReaderManager networkReaderMgr, final CyNetworkNaming netNaming, final SynClientMgr clientMgr, final AuthCacheMgr authCacheMgr) {
-    this.networkMgr = networkMgr;
-    this.networkViewMgr = networkViewMgr;
-    this.networkReaderMgr = networkReaderMgr;
-    this.netNaming = netNaming;
+  public ImportNetworkFromSynapseTaskFactory(/*final CyNetworkManager networkMgr, final CyNetworkViewManager networkViewMgr, final CyNetworkReaderManager networkReaderMgr, final CyNetworkNaming netNaming, */ final LoadNetworkFileTaskFactory loadNetworkFileTF, final SynClientMgr clientMgr, final AuthCacheMgr authCacheMgr) {
+    this.loadNetworkFileTF = loadNetworkFileTF;
     this.clientMgr = clientMgr;
     this.authCacheMgr = authCacheMgr;
   }
@@ -30,7 +21,7 @@ public class ImportNetworkFromSynapseTaskFactory extends AbstractTaskFactory {
     if (clientMgr.get() == null) {
       iterator.append(new LoginTask(clientMgr, authCacheMgr));
     }
-    iterator.append(new ImportNetworkFromSynapseTask(networkMgr, networkViewMgr, networkReaderMgr, netNaming, clientMgr, authCacheMgr));
+    iterator.append(new ImportNetworkFromSynapseTask(loadNetworkFileTF, clientMgr));
     return iterator;
   }
 

@@ -5,26 +5,18 @@ import java.util.Properties;
 import org.osgi.framework.BundleContext;
 
 import org.cytoscape.application.CyApplicationConfiguration;
-import org.cytoscape.io.read.CyNetworkReaderManager;
-import org.cytoscape.io.read.CyTableReaderManager;
-import org.cytoscape.model.CyNetworkManager;
-import org.cytoscape.model.CyTableManager;
 import org.cytoscape.service.util.AbstractCyActivator;
-import org.cytoscape.view.model.CyNetworkViewManager;
 import org.cytoscape.work.TaskFactory;
 import org.cytoscape.work.ServiceProperties;
-import org.cytoscape.session.CyNetworkNaming;
+import org.cytoscape.task.read.LoadNetworkFileTaskFactory;
+import org.cytoscape.task.read.LoadTableFileTaskFactory;
 
 public class CyActivator extends AbstractCyActivator {
   public void start(BundleContext bc) {
     System.out.println((new java.util.Date()).toString() + " started: " + getClass().getName());
     
-    final CyNetworkManager networkMgr = getService(bc, CyNetworkManager.class);
-    final CyNetworkNaming netNaming = getService(bc, CyNetworkNaming.class);
-    final CyNetworkViewManager networkViewMgr = getService(bc, CyNetworkViewManager.class);
-    final CyNetworkReaderManager networkReaderMgr = getService(bc, CyNetworkReaderManager.class);
-    final CyTableManager tableMgr = getService(bc, CyTableManager.class);
-    final CyTableReaderManager tableReaderMgr = getService(bc, CyTableReaderManager.class);
+    final LoadNetworkFileTaskFactory loadNetworkFileTF = getService(bc, LoadNetworkFileTaskFactory.class);
+    final LoadTableFileTaskFactory loadTableFileTF = getService(bc, LoadTableFileTaskFactory.class);
     final CyApplicationConfiguration cyAppConf = getService(bc, CyApplicationConfiguration.class);
 
     final SynClientMgr clientMgr = new SynClientMgr();
@@ -35,12 +27,12 @@ public class CyActivator extends AbstractCyActivator {
       ServiceProperties.PREFERRED_MENU, "Apps.Synapse"
     ));
 
-    registerService(bc, new ImportNetworkFromSynapseTaskFactory(networkMgr, networkViewMgr, networkReaderMgr, netNaming, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
+    registerService(bc, new ImportNetworkFromSynapseTaskFactory(/*networkMgr, networkViewMgr, networkReaderMgr, netNaming,*/ loadNetworkFileTF, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "From Synapse...",
       ServiceProperties.PREFERRED_MENU, "File.Import.Network"
     ));
 
-    registerService(bc, new ImportTableFromSynapseTaskFactory(tableMgr, tableReaderMgr, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
+    registerService(bc, new ImportTableFromSynapseTaskFactory(loadTableFileTF, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "From Synapse...",
       ServiceProperties.PREFERRED_MENU, "File.Import.Table"
     ));

@@ -1,20 +1,16 @@
 package org.synapse.cytoscapeclient.internal;
 
-import org.cytoscape.model.CyTableManager;
-import org.cytoscape.io.read.CyTableReaderManager;
-
 import org.cytoscape.work.AbstractTaskFactory;
 import org.cytoscape.work.TaskIterator;
+import org.cytoscape.task.read.LoadTableFileTaskFactory;
 
 public class ImportTableFromSynapseTaskFactory extends AbstractTaskFactory {
-  final CyTableManager tableMgr;
-  final CyTableReaderManager tableReaderMgr;
+  final LoadTableFileTaskFactory loadTableFileTF;
   final SynClientMgr clientMgr;
   final AuthCacheMgr authCacheMgr;
 
-  public ImportTableFromSynapseTaskFactory(final CyTableManager tableMgr, final CyTableReaderManager tableReaderMgr, final SynClientMgr clientMgr, final AuthCacheMgr authCacheMgr) {
-    this.tableMgr = tableMgr;
-    this.tableReaderMgr = tableReaderMgr;
+  public ImportTableFromSynapseTaskFactory(final LoadTableFileTaskFactory loadTableFileTF, final SynClientMgr clientMgr, final AuthCacheMgr authCacheMgr) {
+    this.loadTableFileTF = loadTableFileTF;
     this.clientMgr = clientMgr;
     this.authCacheMgr = authCacheMgr;
   }
@@ -24,7 +20,7 @@ public class ImportTableFromSynapseTaskFactory extends AbstractTaskFactory {
     if (clientMgr.get() == null) {
       iterator.append(new LoginTask(clientMgr, authCacheMgr));
     }
-    iterator.append(new ImportTableFromSynapseTask(tableMgr, tableReaderMgr, clientMgr));
+    iterator.append(new ImportTableFromSynapseTask(loadTableFileTF, clientMgr));
     return iterator;
   }
 

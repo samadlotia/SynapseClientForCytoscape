@@ -5,6 +5,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.FileOutputStream;
 
+import java.net.URLEncoder;
+
+import java.util.List;
+import java.util.ArrayList;
+
 import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.HttpResponse;
 import org.apache.http.protocol.HttpContext;
@@ -38,6 +43,24 @@ public class SynClient {
     }
   }
 
+  public static class Project {
+    final String name;
+    final String id;
+
+    public Project(final String name, final String id) {
+      this.name = name;
+      this.id = id;
+    }
+
+    public String getName() {
+      return name;
+    }
+
+    public String getId() {
+      return id;
+    }
+  }
+
   private static String join(String ... pieces) {
     final int len = pieces.length;
     final StringBuffer buffer = new StringBuffer();
@@ -47,10 +70,27 @@ public class SynClient {
     return buffer.toString();
   }
 
+  private static String query(String ... kvs) {
+    final int len = kvs.length;
+    final StringBuffer buffer = new StringBuffer();
+    for (int i = 0; i < len; i += 2) {
+      final String k = kvs[i];
+      final String v = kvs[i + 1];
+      buffer.append(URLEncoder.encode(k));
+      buffer.append('=');
+      buffer.append(URLEncoder.encode(v));
+      if (i < (len - 2)) {
+        buffer.append('&');
+      }
+    }
+    return buffer.toString();
+  }
+
   static final String AUTH_ENDPOINT = "https://auth-prod.prod.sagebase.org/auth/v1";
   static final String REPO_ENDPOINT = "https://repo-prod.prod.sagebase.org/repo/v1";
 
   final HttpClient client;
+  String ownerId = null;
 
   public SynClient(final HttpRequestInterceptor auth) {
     client = 
@@ -100,7 +140,8 @@ public class SynClient {
         monitor.setStatusMessage("Attempting to retrieve login credentials");
         final HttpResponse resp = super.exec(new HttpGet(join(REPO_ENDPOINT, "/userProfile/")));
         final JsonNode root = toJson(resp);
-        return root.get("ownerId").asText();
+        ownerId = root.get("ownerId").asText();
+        return ownerId;
       }
     };
   }
@@ -163,6 +204,22 @@ public class SynClient {
         input.close();
 
         return new SynFile(file, filename);
+      }
+    };
+  }
+
+  public MaybeTask<List<Project>> newProjectsTask() {
+    return new ReqTask<List<Project>>() {
+      protected List<Project> checkedRun(final TaskMonitor monitor) throws Exception {
+        final JsonNode jroot = toJson(super.exec(new HttpGet(join(REPO_ENDPOINT, "/query?", query("query", join("SELECT * FROM project WHERE project.createdByPrincipalId == ", ownerId))))));
+        System.out.println("/query response: " + jroot.toString());
+        final JsonNode jprojects = jroot.get("results");
+        final List<Project> projects = new ArrayList<Project>();
+        for (final JsonNode jproject : jprojects) {
+          final Project project = new Project(jproject.get("project.name").textValue(), jproject.get("project.id").textValue());
+          projects.add(project);
+        }
+        return projects;
       }
     };
   }

@@ -5,8 +5,11 @@ import java.util.Properties;
 import org.osgi.framework.BundleContext;
 
 import org.cytoscape.application.CyApplicationConfiguration;
+import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.service.util.AbstractCyActivator;
 import org.cytoscape.work.TaskFactory;
+import org.cytoscape.work.TaskManager;
+import org.cytoscape.work.swing.DialogTaskManager;
 import org.cytoscape.work.ServiceProperties;
 import org.cytoscape.task.read.LoadNetworkFileTaskFactory;
 import org.cytoscape.task.read.LoadTableFileTaskFactory;
@@ -18,12 +21,19 @@ public class CyActivator extends AbstractCyActivator {
     final LoadNetworkFileTaskFactory loadNetworkFileTF = getService(bc, LoadNetworkFileTaskFactory.class);
     final LoadTableFileTaskFactory loadTableFileTF = getService(bc, LoadTableFileTaskFactory.class);
     final CyApplicationConfiguration cyAppConf = getService(bc, CyApplicationConfiguration.class);
+    final CySwingApplication cySwingApp = getService(bc, CySwingApplication.class);
+    final TaskManager taskMgr = getService(bc, DialogTaskManager.class);
 
     final SynClientMgr clientMgr = new SynClientMgr();
     final AuthCacheMgr authCacheMgr = new AuthCacheMgr(cyAppConf.getAppConfigurationDirectoryLocation(this.getClass()));
 
     registerService(bc, new LoginTaskFactory(clientMgr, authCacheMgr), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "Login...",
+      ServiceProperties.PREFERRED_MENU, "Apps.Synapse"
+    ));
+
+    registerService(bc, new BrowseTaskFactory(cySwingApp, clientMgr, taskMgr, authCacheMgr), TaskFactory.class, ezProps(
+      ServiceProperties.TITLE, "Browse...",
       ServiceProperties.PREFERRED_MENU, "Apps.Synapse"
     ));
 

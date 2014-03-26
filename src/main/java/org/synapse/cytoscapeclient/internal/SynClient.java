@@ -91,6 +91,7 @@ public class SynClient {
 
   final HttpClient client;
   String ownerId = null;
+  String userName = null;
 
   public SynClient(final HttpRequestInterceptor auth) {
     client = 
@@ -140,7 +141,9 @@ public class SynClient {
         monitor.setStatusMessage("Attempting to retrieve login credentials");
         final HttpResponse resp = super.exec(new HttpGet(join(REPO_ENDPOINT, "/userProfile/")));
         final JsonNode root = toJson(resp);
+        System.out.println(root.toString());
         ownerId = root.get("ownerId").asText();
+        userName = root.get("userName").asText();
         return ownerId;
       }
     };
@@ -214,6 +217,7 @@ public class SynClient {
         final JsonNode jroot = toJson(super.exec(new HttpGet(join(REPO_ENDPOINT, "/query?", query("query", join("SELECT * FROM project WHERE project.createdByPrincipalId == ", ownerId))))));
         System.out.println("/query response: " + jroot.toString());
         final JsonNode jprojects = jroot.get("results");
+        System.out.println(jprojects);
         final List<Project> projects = new ArrayList<Project>();
         for (final JsonNode jproject : jprojects) {
           final Project project = new Project(jproject.get("project.name").textValue(), jproject.get("project.id").textValue());
@@ -222,5 +226,9 @@ public class SynClient {
         return projects;
       }
     };
+  }
+
+  public String getUserName() {
+    return userName;
   }
 }

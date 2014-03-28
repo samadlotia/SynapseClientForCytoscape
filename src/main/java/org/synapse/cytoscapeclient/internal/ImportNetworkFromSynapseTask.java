@@ -9,6 +9,7 @@ import org.cytoscape.task.read.LoadNetworkFileTaskFactory;
 import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.Tunable;
 import org.cytoscape.work.TaskMonitor;
+import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskObserver;
 import org.cytoscape.work.ObservableTask;
 import org.cytoscape.work.FinishStatus;
@@ -23,8 +24,6 @@ public class ImportNetworkFromSynapseTask extends AbstractTask {
 
   @Tunable(description="Synapse ID", gravity=1.0)
   public String entityId;
-
-  volatile MaybeTask<SynClient.SynFile> task = null;
 
   public ImportNetworkFromSynapseTask(final LoadNetworkFileTaskFactory loadNetworkFileTF, final SynClientMgr clientMgr) {
     this.loadNetworkFileTF = loadNetworkFileTF;
@@ -41,35 +40,39 @@ public class ImportNetworkFromSynapseTask extends AbstractTask {
     }
 
     monitor.setTitle("Import network from Synapse");
-    task = client.newGetFileTask(entityId);
-    final SynClient.SynFile file = task.run(monitor).get();
-    task = null;
-    if (file == null) { // user cancelled, so exit
+    final ResultTask<SynClient.SynFile> fileTask = client.newFileTask(entityId);
+    super.insertTasksAfterCurrentTask(fileTask, new AbstractTask() {
+      public void run(TaskMonitor monitor) {
+        final TaskIterator iterator = loadNetworkFileTF.createTaskIterator(fileTask.get().getFile(), new SetupNetwork(fileTask));
+        super.insertTasksAfterCurrentTask(iterator);
+      }
+      public void cancel() {}
+    });
+  }
+
+  public void cancel() {}
+}
+
+class SetupNetwork implements TaskObserver {
+  final ResultTask<SynClient.SynFile> fileTask;
+
+  public SetupNetwork(final ResultTask<SynClient.SynFile> fileTask) {
+    this.fileTask = fileTask;
+  }
+
+  public void taskFinished(final ObservableTask task) {
+    final List<CyNetworkView> views = (List<CyNetworkView>) task.getResults(List.class);
+    if (views.size() != 1) {
       return;
     }
-
-    super.insertTasksAfterCurrentTask(loadNetworkFileTF.createTaskIterator(file.getFile(), new TaskObserver() {
-      public void allFinished(final FinishStatus finishStatus) {}
-
-      public void taskFinished(final ObservableTask task) {
-        final List<CyNetworkView> views = (List<CyNetworkView>) task.getResults(List.class);
-        if (views.size() != 1) {
-          return;
-        }
-        final CyNetwork net = views.get(0).getModel();
-        net.getRow(net).set(CyNetwork.NAME, file.getName());
-        if (net instanceof CySubNetwork) {
-          final CyRootNetwork root = ((CySubNetwork) net).getRootNetwork();
-          root.getRow(root).set(CyNetwork.NAME, file.getName());
-        }
-      }
-    }));
-  }
-
-  public void cancel() {
-    cancelled = true;
-    if (task != null) {
-      task.cancel();
+    final String netName = fileTask.get().getName();
+    final CyNetwork net = views.get(0).getModel();
+    net.getRow(net).set(CyNetwork.NAME, netName);
+    if (net instanceof CySubNetwork) {
+      final CyRootNetwork root = ((CySubNetwork) net).getRootNetwork();
+      root.getRow(root).set(CyNetwork.NAME, netName);
     }
   }
+
+  public void allFinished(final FinishStatus finishStatus) {}
 }

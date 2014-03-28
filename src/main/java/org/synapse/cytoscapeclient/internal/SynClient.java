@@ -25,6 +25,24 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.cytoscape.work.TaskMonitor;
 
 public class SynClient {
+  public static class UserProfile {
+    final String ownerId;
+    final String userName;
+
+    public UserProfile(final String ownerId, final String userName) {
+      this.ownerId = ownerId;
+      this.userName = userName;
+    }
+
+    public String getOwnerId() {
+      return ownerId;
+    }
+
+    public String getUserName() {
+      return userName;
+    }
+  }
+
   public static class SynFile {
     final File file;
     final String name;
@@ -90,8 +108,6 @@ public class SynClient {
   static final String REPO_ENDPOINT = "https://repo-prod.prod.sagebase.org/repo/v1";
 
   final HttpClient client;
-  String ownerId = null;
-  String userName = null;
 
   public SynClient(final HttpRequestInterceptor auth) {
     client = 
@@ -117,7 +133,8 @@ public class SynClient {
     }
   }
 
-  abstract class ReqTask<T> extends MaybeTask<T> {
+  abstract class ReqTask<T> extends ResultTask<T> {
+    protected volatile boolean cancelled = false;
     volatile HttpUriRequest req = null;
 
     protected HttpResponse exec(final HttpUriRequest req) throws IOException {
@@ -127,7 +144,8 @@ public class SynClient {
       return resp;
     }
 
-    protected void innerCancel() {
+    public void cancel() {
+      cancelled = true;
       final HttpUriRequest req2 = this.req; // copy the reference to req to prevent it from becoming null while trying to abort it
       if (req2 != null) {
         req2.abort();
@@ -135,16 +153,13 @@ public class SynClient {
     }
   }
 
-  public MaybeTask<String> newGetOwnerTask() {
-    return new ReqTask<String>() {
-      protected String checkedRun(final TaskMonitor monitor) throws Exception {
+  public ResultTask<UserProfile> newUserProfileTask() {
+    return new ReqTask<UserProfile>() {
+      protected UserProfile checkedRun(final TaskMonitor monitor) throws Exception {
         monitor.setStatusMessage("Attempting to retrieve login credentials");
         final HttpResponse resp = super.exec(new HttpGet(join(REPO_ENDPOINT, "/userProfile/")));
         final JsonNode root = toJson(resp);
-        System.out.println(root.toString());
-        ownerId = root.get("ownerId").asText();
-        userName = root.get("userName").asText();
-        return ownerId;
+        return new UserProfile(root.get("ownerId").asText(), root.get("userName").asText());
       }
     };
   }
@@ -162,7 +177,7 @@ public class SynClient {
 
   static final int BLOCK_SIZE = 64 * 1024;
 
-  public MaybeTask<SynFile> newGetFileTask(final String entityId) {
+  public ResultTask<SynFile> newFileTask(final String entityId) {
     return new ReqTask<SynFile>() {
       protected SynFile checkedRun(final TaskMonitor monitor) throws Exception {
         monitor.setProgress(-1);
@@ -211,13 +226,12 @@ public class SynClient {
     };
   }
 
-  public MaybeTask<List<Project>> newProjectsTask() {
+  public ResultTask<List<Project>> newProjectsTask(final UserProfile userProfile) {
     return new ReqTask<List<Project>>() {
       protected List<Project> checkedRun(final TaskMonitor monitor) throws Exception {
-        final JsonNode jroot = toJson(super.exec(new HttpGet(join(REPO_ENDPOINT, "/query?", query("query", join("SELECT * FROM project WHERE project.createdByPrincipalId == ", ownerId))))));
-        System.out.println("/query response: " + jroot.toString());
+        final String query = join("SELECT * FROM project WHERE project.createdByPrincipalId == ", userProfile.getOwnerId());
+        final JsonNode jroot = toJson(super.exec(new HttpGet(join(REPO_ENDPOINT, "/query?", query("query", query)))));
         final JsonNode jprojects = jroot.get("results");
-        System.out.println(jprojects);
         final List<Project> projects = new ArrayList<Project>();
         for (final JsonNode jproject : jprojects) {
           final Project project = new Project(jproject.get("project.name").textValue(), jproject.get("project.id").textValue());
@@ -226,9 +240,5 @@ public class SynClient {
         return projects;
       }
     };
-  }
-
-  public String getUserName() {
-    return userName;
   }
 }

@@ -6,6 +6,7 @@ import java.io.IOException;
 import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.Tunable;
 import org.cytoscape.work.TaskMonitor;
+import org.cytoscape.work.TaskIterator;
 import org.cytoscape.task.read.LoadTableFileTaskFactory;
 
 public class ImportTableFromSynapseTask extends AbstractTask {
@@ -14,9 +15,6 @@ public class ImportTableFromSynapseTask extends AbstractTask {
 
   @Tunable(description="Synapse ID", gravity=1.0)
   public String entityId;
-
-  volatile MaybeTask<SynClient.SynFile> task = null;
-  volatile boolean cancelled = false;
 
   public ImportTableFromSynapseTask(final LoadTableFileTaskFactory loadTableFileTF, final SynClientMgr clientMgr) {
     this.loadTableFileTF = loadTableFileTF;
@@ -34,20 +32,18 @@ public class ImportTableFromSynapseTask extends AbstractTask {
 
     monitor.setTitle("Import table from Synapse");
     monitor.setStatusMessage("Getting entity information");
-    task = client.newGetFileTask(entityId);
-    final SynClient.SynFile file = task.run(monitor).get();
-    task = null;
-    if (file == null) { // user cancelled, so exit
-      return;
-    }
 
-    super.insertTasksAfterCurrentTask(loadTableFileTF.createTaskIterator(file.getFile()));
+    final ResultTask<SynClient.SynFile> fileTask = client.newFileTask(entityId);
+    super.insertTasksAfterCurrentTask(fileTask, new AbstractTask() {
+      public void run(TaskMonitor monitor) {
+        final TaskIterator iterator = loadTableFileTF.createTaskIterator(fileTask.get().getFile());
+        super.insertTasksAfterCurrentTask(iterator);
+      }
+
+      public void cancel() {}
+    });
+
   }
 
-  public void cancel() {
-    cancelled = true;
-    if (task != null) {
-      task.cancel();
-    }
-  }
+  public void cancel() {}
 }

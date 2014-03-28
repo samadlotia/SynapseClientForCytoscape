@@ -37,7 +37,7 @@ class BrowserDialog {
     final ResultTask<SynClient.UserProfile> userProfileTask = client.newUserProfileTask();
     taskMgr.execute(new TaskIterator(userProfileTask, new AbstractTask() {
       public void run(TaskMonitor monitor) {
-        final ResultTask<List<SynClient.Project>> projectsTask = client.newProjectsTask(userProfileTask.get());
+        final ResultTask<List<SynClient.Entity>> projectsTask = client.newProjectsTask(userProfileTask.get());
         super.insertTasksAfterCurrentTask(projectsTask, new AddProjects(userProfileTask, projectsTask));
       }
 
@@ -47,19 +47,19 @@ class BrowserDialog {
 
   class AddProjects extends AbstractTask {
     final ResultTask<SynClient.UserProfile> userProfileTask;
-    final ResultTask<List<SynClient.Project>> projectsTask;
+    final ResultTask<List<SynClient.Entity>> projectsTask;
 
-    public AddProjects(final ResultTask<SynClient.UserProfile> userProfileTask, final ResultTask<List<SynClient.Project>> projectsTask) {
+    public AddProjects(final ResultTask<SynClient.UserProfile> userProfileTask, final ResultTask<List<SynClient.Entity>> projectsTask) {
       this.userProfileTask = userProfileTask;
       this.projectsTask = projectsTask;
     }
 
     public void run(final TaskMonitor monitor) throws Exception {
-      final List<SynClient.Project> projects = projectsTask.get();
+      final List<SynClient.Entity> projects = projectsTask.get();
       if (projects == null)
         return;
       final DefaultMutableTreeNode root = new DefaultMutableTreeNode(userProfileTask.get().getUserName());
-      for (final SynClient.Project project : projects) {
+      for (final SynClient.Entity project : projects) {
         final DefaultMutableTreeNode child = new DefaultMutableTreeNode(project.getName());
         root.add(child);
       }

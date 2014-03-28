@@ -61,21 +61,27 @@ public class SynClient {
     }
   }
 
-  public static class Project {
-    final String name;
+  public static class Entity {
     final String id;
+    final String name;
+    final String type;
 
-    public Project(final String name, final String id) {
-      this.name = name;
+    public Entity(final String id, final String name, final String type) {
       this.id = id;
+      this.name = name;
+      this.type = type;
+    }
+
+    public String getId() {
+      return id;
     }
 
     public String getName() {
       return name;
     }
 
-    public String getId() {
-      return id;
+    public String getType() {
+      return type;
     }
   }
 
@@ -226,15 +232,18 @@ public class SynClient {
     };
   }
 
-  public ResultTask<List<Project>> newProjectsTask(final UserProfile userProfile) {
-    return new ReqTask<List<Project>>() {
-      protected List<Project> checkedRun(final TaskMonitor monitor) throws Exception {
-        final String query = join("SELECT * FROM project WHERE project.createdByPrincipalId == ", userProfile.getOwnerId());
+  public ResultTask<List<Entity>> newProjectsTask(final UserProfile userProfile) {
+    return new ReqTask<List<Entity>>() {
+      protected List<Entity> checkedRun(final TaskMonitor monitor) throws Exception {
+        final String query = join("SELECT id, name, concreteType FROM project WHERE project.createdByPrincipalId == ", userProfile.getOwnerId());
         final JsonNode jroot = toJson(super.exec(new HttpGet(join(REPO_ENDPOINT, "/query?", query("query", query)))));
         final JsonNode jprojects = jroot.get("results");
-        final List<Project> projects = new ArrayList<Project>();
+        final List<Entity> projects = new ArrayList<Entity>();
         for (final JsonNode jproject : jprojects) {
-          final Project project = new Project(jproject.get("project.name").textValue(), jproject.get("project.id").textValue());
+          final String id = jproject.get("project.id").textValue();
+          final String name = jproject.get("project.name").textValue();
+          final String type = jproject.get("project.concreteType").get(0).textValue();
+          final Entity project = new Entity(id, name, type);
           projects.add(project);
         }
         return projects;

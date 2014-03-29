@@ -53,6 +53,40 @@ public class ImportNetworkFromSynapseTask extends AbstractTask {
   public void cancel() {}
 }
 
+class InternalImport extends AbstractTask {
+  final LoadNetworkFileTaskFactory loadNetworkFileTF;
+  final SynClientMgr clientMgr;
+  final String entityId;
+
+  public InternalImport(final LoadNetworkFileTaskFactory loadNetworkFileTF, final SynClientMgr clientMgr, final String entityId) {
+    this.loadNetworkFileTF = loadNetworkFileTF;
+    this.clientMgr = clientMgr;
+    this.entityId = entityId;
+  }
+  
+  public void run(TaskMonitor monitor) throws Exception {
+    if (entityId == null || entityId.length() == 0)
+      return;
+
+    final SynClient client = clientMgr.get();
+    if (client == null) { // not logged in, so just exit
+      return;
+    }
+
+    monitor.setTitle("Import network from Synapse");
+    final ResultTask<SynClient.SynFile> fileTask = client.newFileTask(entityId);
+    super.insertTasksAfterCurrentTask(fileTask, new AbstractTask() {
+      public void run(TaskMonitor monitor) {
+        final TaskIterator iterator = loadNetworkFileTF.createTaskIterator(fileTask.get().getFile(), new SetupNetwork(fileTask));
+        super.insertTasksAfterCurrentTask(iterator);
+      }
+      public void cancel() {}
+    });
+  }
+
+  public void cancel() {}
+}
+
 class SetupNetwork implements TaskObserver {
   final ResultTask<SynClient.SynFile> fileTask;
 

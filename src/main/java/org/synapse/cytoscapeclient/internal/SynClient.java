@@ -83,6 +83,10 @@ public class SynClient {
     public String getType() {
       return type;
     }
+
+    public String toString() {
+      return name;
+    }
   }
 
   private static String join(String ... pieces) {
@@ -247,6 +251,25 @@ public class SynClient {
           projects.add(project);
         }
         return projects;
+      }
+    };
+  }
+
+  public ResultTask<List<Entity>> newChildrenTask(final String parentId) {
+    return new ReqTask<List<Entity>>() {
+      protected List<Entity> checkedRun(final TaskMonitor monitor) throws Exception {
+        final List<Entity> children = new ArrayList<Entity>();
+        final JsonNode jchildren = toJson(super.exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", parentId, "/children"))));
+        for (final JsonNode jchild : jchildren.get("idList")) {
+          final String id = jchild.get("id").textValue();
+          final JsonNode jinfo = toJson(super.exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", id, "/bundle?mask=", Integer.toString(0x1 | 0x20)))));
+          final JsonNode jentity = jinfo.get("entity");
+          final String name = jentity.get("name").textValue();
+          final String type = jentity.get("entityType").textValue();
+          final Entity child = new Entity(id, name, type);
+          children.add(child);
+        }
+        return children;
       }
     };
   }

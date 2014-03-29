@@ -29,6 +29,9 @@ import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskMonitor;
 
+import org.cytoscape.task.read.LoadNetworkFileTaskFactory;
+import org.cytoscape.task.read.LoadTableFileTaskFactory;
+
 class BrowserDialog {
   final SynClient client;
   final TaskManager taskMgr;
@@ -37,7 +40,7 @@ class BrowserDialog {
   final DefaultTreeModel model;
   final JTree tree;
 
-  public BrowserDialog(final Frame parent, final SynClientMgr clientMgr, final TaskManager taskMgr) {
+  public BrowserDialog(final Frame parent, final SynClientMgr clientMgr, final TaskManager taskMgr, final LoadNetworkFileTaskFactory loadNetworkFileTF, final LoadTableFileTaskFactory loadTableFileTF) {
     client = clientMgr.get();
     this.taskMgr = taskMgr;
     dialog = new JDialog(parent, "Browse Synapse", false);
@@ -49,10 +52,17 @@ class BrowserDialog {
     importNetworkBtn.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
         final SynClient.Entity entity = getSelectedEntity();
-        taskMgr.execute(new TaskIterator(ImportNetworkFromSynapseTask.noTunables(null, clientMgr, entity.getId())));
+        taskMgr.execute(new TaskIterator(ImportNetworkFromSynapseTask.noTunables(loadNetworkFileTF, clientMgr, entity.getId())));
       }
     });
+
     final JButton importTableBtn = new JButton("Import as Table");
+    importTableBtn.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        final SynClient.Entity entity = getSelectedEntity();
+        taskMgr.execute(new TaskIterator(ImportTableFromSynapseTask.noTunables(loadTableFileTF, clientMgr, entity.getId())));
+      }
+    });
 
     tree.addTreeSelectionListener(new TreeSelectionListener() {
       public void valueChanged(TreeSelectionEvent e) {

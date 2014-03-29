@@ -22,6 +22,28 @@ public class ImportTableFromSynapseTask extends AbstractTask {
   }
 
   public void run(TaskMonitor monitor) throws Exception {
+    super.insertTasksAfterCurrentTask(new InternalTask(loadTableFileTF, clientMgr, entityId));
+  }
+
+  public void cancel() {}
+
+  public static AbstractTask noTunables(final LoadTableFileTaskFactory loadTableFileTF, final SynClientMgr clientMgr, final String entityId) {
+    return new InternalTask(loadTableFileTF, clientMgr, entityId);
+  }
+}
+
+class InternalTask extends AbstractTask {
+  final LoadTableFileTaskFactory loadTableFileTF;
+  final SynClientMgr clientMgr;
+  final String entityId;
+
+  public InternalTask(final LoadTableFileTaskFactory loadTableFileTF, final SynClientMgr clientMgr, final String entityId) {
+    this.loadTableFileTF = loadTableFileTF;
+    this.clientMgr = clientMgr;
+    this.entityId = entityId;
+  }
+
+  public void run(TaskMonitor monitor) throws Exception {
     if (entityId == null || entityId.length() == 0)
       return;
 

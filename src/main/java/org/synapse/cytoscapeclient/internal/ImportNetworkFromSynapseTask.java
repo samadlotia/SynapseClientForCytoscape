@@ -31,26 +31,14 @@ public class ImportNetworkFromSynapseTask extends AbstractTask {
   }
 
   public void run(TaskMonitor monitor) throws Exception {
-    if (entityId == null || entityId.length() == 0)
-      return;
-
-    final SynClient client = clientMgr.get();
-    if (client == null) { // not logged in, so just exit
-      return;
-    }
-
-    monitor.setTitle("Import network from Synapse");
-    final ResultTask<SynClient.SynFile> fileTask = client.newFileTask(entityId);
-    super.insertTasksAfterCurrentTask(fileTask, new AbstractTask() {
-      public void run(TaskMonitor monitor) {
-        final TaskIterator iterator = loadNetworkFileTF.createTaskIterator(fileTask.get().getFile(), new SetupNetwork(fileTask));
-        super.insertTasksAfterCurrentTask(iterator);
-      }
-      public void cancel() {}
-    });
+    super.insertTasksAfterCurrentTask(new InternalImport(loadNetworkFileTF, clientMgr, entityId));
   }
 
   public void cancel() {}
+
+  public static AbstractTask noTunables(final LoadNetworkFileTaskFactory loadNetworkFileTF, final SynClientMgr clientMgr, final String entityId) {
+    return new InternalImport(loadNetworkFileTF, clientMgr, entityId);
+  }
 }
 
 class InternalImport extends AbstractTask {
@@ -63,7 +51,7 @@ class InternalImport extends AbstractTask {
     this.clientMgr = clientMgr;
     this.entityId = entityId;
   }
-  
+
   public void run(TaskMonitor monitor) throws Exception {
     if (entityId == null || entityId.length() == 0)
       return;

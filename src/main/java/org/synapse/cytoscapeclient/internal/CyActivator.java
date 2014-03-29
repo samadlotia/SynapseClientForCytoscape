@@ -32,7 +32,7 @@ public class CyActivator extends AbstractCyActivator {
       ServiceProperties.PREFERRED_MENU, "Apps.Synapse"
     ));
 
-    registerService(bc, new BrowseTaskFactory(cySwingApp, clientMgr, taskMgr, authCacheMgr), TaskFactory.class, ezProps(
+    registerService(bc, new BrowseTaskFactory(cySwingApp, clientMgr, taskMgr, authCacheMgr, loadNetworkFileTF, loadTableFileTF), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "Browse...",
       ServiceProperties.PREFERRED_MENU, "Apps.Synapse"
     ));

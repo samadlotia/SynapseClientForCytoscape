@@ -3,7 +3,11 @@ package org.synapse.cytoscapeclient.internal;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.FileOutputStream;
+import java.io.ByteArrayOutputStream;
+import java.util.zip.GZIPInputStream;
+import java.nio.charset.Charset;
 
 import java.net.URLEncoder;
 
@@ -11,6 +15,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 import org.apache.http.HttpRequestInterceptor;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.protocol.HttpContext;
 
@@ -270,6 +275,54 @@ public class SynClient {
           children.add(child);
         }
         return children;
+      }
+    };
+  }
+
+  public ResultTask<String> newDescriptionIdTask(final String entityId) {
+    return new ReqTask<String>() {
+      protected String checkedRun(final TaskMonitor monitor) throws Exception {
+        final HttpResponse response = super.exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", entityId, "/wiki2")));
+        final int statusCode = response.getStatusLine().getStatusCode();
+        if (statusCode == 404)
+          return null;
+        final JsonNode jinfo = toJson(response);
+        return jinfo.get("id").textValue();
+      }
+    };
+  }
+
+  public ResultTask<String> newDescriptionMarkdownTask(final String entityId, final String descriptionId) {
+    return new ReqTask<String>() {
+      protected String checkedRun(final TaskMonitor monitor) throws Exception {
+        final HttpResponse response = super.exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", entityId, "/wiki2/", descriptionId, "/markdown")));
+        final HttpEntity entity = response.getEntity();
+        final InputStream input = new GZIPInputStream(entity.getContent());
+        final long totalLen = entity.getContentLength();
+        ByteArrayOutputStream output = null;
+        if (totalLen > 0L) {
+          output = new ByteArrayOutputStream((int) totalLen);
+        } else {
+          output = new ByteArrayOutputStream();
+        }
+
+        final byte[] buffer = new byte[BLOCK_SIZE];
+        long readLen = 0;
+        while (!super.cancelled) {
+          final int len = input.read(buffer);
+          if (len < 0)
+            break;
+          output.write(buffer, 0, len);
+
+          readLen += len;
+          if (totalLen >= 0L) {
+            monitor.setProgress(((double) readLen) / ((double) totalLen));
+          }
+        }
+        input.close();
+
+        final String encoding = entity.getContentEncoding() == null ? "UTF-8" : entity.getContentEncoding().getValue();
+        return new String(output.toByteArray(), Charset.forName(encoding));
       }
     };
   }

@@ -1,6 +1,8 @@
 package org.synapse.cytoscapeclient.internal;
 
 import java.util.List;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 
 import java.awt.FlowLayout;
 import java.awt.Frame;
@@ -24,6 +26,8 @@ import javax.swing.JMenuItem;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 
+import org.markdown4j.Markdown4jProcessor;
+
 import org.cytoscape.work.TaskManager;
 import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.TaskIterator;
@@ -39,6 +43,7 @@ class BrowserDialog {
   final JDialog dialog;
   final DefaultTreeModel model;
   final JTree tree;
+  final Markdown4jProcessor mdProcessor = new Markdown4jProcessor();
 
   public BrowserDialog(final Frame parent, final SynClientMgr clientMgr, final TaskManager taskMgr, final LoadNetworkFileTaskFactory loadNetworkFileTF, final LoadTableFileTaskFactory loadTableFileTF) {
     client = clientMgr.get();
@@ -46,6 +51,7 @@ class BrowserDialog {
     dialog = new JDialog(parent, "Browse Synapse", false);
     model = new DefaultTreeModel(new DefaultMutableTreeNode());
     infoPane = new JEditorPane("text/html", "");
+    infoPane.setEditable(false);
     tree = new JTree(model);
 
     final JButton importNetworkBtn = new JButton("Import as Network");
@@ -70,7 +76,9 @@ class BrowserDialog {
         if (entity == null) {
           infoPane.setText("");
         } else {
-          infoPane.setText(String.format("<html><h1>%s</h1><h3>%s</h3></html>", entity.getName(), entity.getId()));
+          setEntityDescription(entity);
+          final ResultTask<String> descriptionIdTask = client.newDescriptionIdTask(entity.getId());
+          taskMgr.execute(new TaskIterator(descriptionIdTask, new GetDescription(entity, descriptionIdTask)));
         }
 
         if (entity != null && entity.getType().endsWith("FileEntity")) {
@@ -177,6 +185,56 @@ class BrowserDialog {
         }
       }
       tree.expandPath(new TreePath(parentNode.getPath()));
+    }
+
+    public void cancel() {}
+  }
+
+  private void setEntityDescription(final SynClient.Entity entity) {
+    infoPane.setText(String.format("<html><h1>%s</h1><h3>%s</h3></html>", entity.getName(), entity.getId()));
+  }
+
+  private void setEntityDescription(final SynClient.Entity entity, final String details) {
+    infoPane.setText(String.format("<html><h1>%s</h1><h3>%s</h3><br>%s</html>", entity.getName(), entity.getId(), details));
+  }
+
+  class GetDescription extends AbstractTask {
+    final SynClient.Entity entity;
+    final ResultTask<String> descriptionIdTask;
+
+    public GetDescription(final SynClient.Entity entity, final ResultTask<String> descriptionIdTask) {
+      this.entity = entity;
+      this.descriptionIdTask = descriptionIdTask;
+    }
+
+    public void run(TaskMonitor monitor) {
+      if (getSelectedEntity() != entity)
+        return;
+      final String descriptionId = descriptionIdTask.get();
+      if (descriptionId == null)
+        return;
+      final ResultTask<String> descriptionTask = client.newDescriptionMarkdownTask(entity.getId(), descriptionId);
+      super.insertTasksAfterCurrentTask(descriptionTask, new ShowDescription(entity, descriptionTask));
+    }
+
+    public void cancel() {}
+  }
+
+  class ShowDescription extends AbstractTask {
+    final SynClient.Entity entity;
+    final ResultTask<String> descriptionTask;
+
+    public ShowDescription(final SynClient.Entity entity, final ResultTask<String> descriptionTask) {
+      this.entity = entity;
+      this.descriptionTask = descriptionTask;
+    }
+
+    public void run(TaskMonitor monitor) throws Exception {
+      if (getSelectedEntity() != entity)
+        return;
+      final String descriptionMd = descriptionTask.get();
+      final String descriptionHtml = mdProcessor.process(descriptionMd);
+      setEntityDescription(entity, descriptionHtml);
     }
 
     public void cancel() {}

@@ -21,14 +21,14 @@ public class ImporterMgr {
   }
 
   public boolean doesImporterExist(final String extension, final DataCategory category) {
-    System.out.println("doesImporterExist: " + extension + " for " + category.getDisplayName());
+    //System.out.println("doesImporterExist: " + extension + " for " + category.getDisplayName());
     final Set<CyFileFilter> fileFilters2 = new HashSet<CyFileFilter>(fileFilters.values()); // copy fileFilters to prevent concurrent modifications while looping thru fileFilters
     for (final CyFileFilter fileFilter : fileFilters2) {
-      System.out.println("Checking data category: " + fileFilter.getDataCategory().getDisplayName());
+      //System.out.println("Checking data category: " + fileFilter.getDataCategory().getDisplayName());
       if (!fileFilter.getDataCategory().equals(category)) {
         continue;
       }
-      System.out.println("Checking extensions: " + fileFilter.getExtensions());
+      //System.out.println("Checking extensions: " + fileFilter.getExtensions());
       if (fileFilter.getExtensions().contains(extension)) {
         return true;
       }

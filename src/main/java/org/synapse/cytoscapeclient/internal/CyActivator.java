@@ -13,6 +13,7 @@ import org.cytoscape.work.swing.DialogTaskManager;
 import org.cytoscape.work.ServiceProperties;
 import org.cytoscape.task.read.LoadNetworkFileTaskFactory;
 import org.cytoscape.task.read.LoadTableFileTaskFactory;
+import org.cytoscape.io.read.InputStreamTaskFactory;
 
 public class CyActivator extends AbstractCyActivator {
   public void start(BundleContext bc) {
@@ -27,17 +28,20 @@ public class CyActivator extends AbstractCyActivator {
     final SynClientMgr clientMgr = new SynClientMgr();
     final AuthCacheMgr authCacheMgr = new AuthCacheMgr(cyAppConf.getAppConfigurationDirectoryLocation(this.getClass()));
 
+    final ImporterMgr importerMgr = new ImporterMgr();
+    registerServiceListener(bc, importerMgr, "addFactory", "removeFactory", InputStreamTaskFactory.class);
+
     registerService(bc, new LoginTaskFactory(clientMgr, authCacheMgr), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "Login...",
       ServiceProperties.PREFERRED_MENU, "Apps.Synapse"
     ));
 
-    registerService(bc, new BrowseTaskFactory(cySwingApp, clientMgr, taskMgr, authCacheMgr, loadNetworkFileTF, loadTableFileTF), TaskFactory.class, ezProps(
+    registerService(bc, new BrowseTaskFactory(cySwingApp, clientMgr, taskMgr, authCacheMgr, importerMgr, loadNetworkFileTF, loadTableFileTF), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "Browse...",
       ServiceProperties.PREFERRED_MENU, "Apps.Synapse"
     ));
 
-    registerService(bc, new ImportNetworkFromSynapseTaskFactory(/*networkMgr, networkViewMgr, networkReaderMgr, netNaming,*/ loadNetworkFileTF, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
+    registerService(bc, new ImportNetworkFromSynapseTaskFactory(loadNetworkFileTF, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "From Synapse...",
       ServiceProperties.PREFERRED_MENU, "File.Import.Network"
     ));

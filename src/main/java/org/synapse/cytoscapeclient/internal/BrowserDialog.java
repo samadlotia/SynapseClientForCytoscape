@@ -35,61 +35,55 @@ import org.cytoscape.work.TaskMonitor;
 
 import org.cytoscape.task.read.LoadNetworkFileTaskFactory;
 import org.cytoscape.task.read.LoadTableFileTaskFactory;
+import org.cytoscape.io.DataCategory;
 
 class BrowserDialog {
   final SynClient client;
   final TaskManager taskMgr;
+  final ImporterMgr importerMgr;
   final JEditorPane infoPane;
   final JDialog dialog;
   final DefaultTreeModel model;
   final JTree tree;
+  final JButton importNetworkBtn;
+  final JButton importTableBtn;
   final Markdown4jProcessor mdProcessor = new Markdown4jProcessor();
 
-  public BrowserDialog(final Frame parent, final SynClientMgr clientMgr, final TaskManager taskMgr, final LoadNetworkFileTaskFactory loadNetworkFileTF, final LoadTableFileTaskFactory loadTableFileTF) {
+  public BrowserDialog(
+        final Frame parent,
+        final SynClientMgr clientMgr,
+        final TaskManager taskMgr,
+        final ImporterMgr importerMgr,
+        final LoadNetworkFileTaskFactory loadNetworkFileTF,
+        final LoadTableFileTaskFactory loadTableFileTF) {
     client = clientMgr.get();
     this.taskMgr = taskMgr;
+    this.importerMgr = importerMgr;
     dialog = new JDialog(parent, "Browse Synapse", false);
     model = new DefaultTreeModel(new DefaultMutableTreeNode());
     infoPane = new JEditorPane("text/html", "");
     infoPane.setEditable(false);
     tree = new JTree(model);
 
-    final JButton importNetworkBtn = new JButton("Import as Network");
+    importNetworkBtn = new JButton("Import as Network");
     importNetworkBtn.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
         final SynClient.Entity entity = getSelectedEntity();
         taskMgr.execute(new TaskIterator(ImportNetworkFromSynapseTask.noTunables(loadNetworkFileTF, clientMgr, entity.getId())));
       }
     });
+    importNetworkBtn.setEnabled(false);
 
-    final JButton importTableBtn = new JButton("Import as Table");
+    importTableBtn = new JButton("Import as Table");
     importTableBtn.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
         final SynClient.Entity entity = getSelectedEntity();
         taskMgr.execute(new TaskIterator(ImportTableFromSynapseTask.noTunables(loadTableFileTF, clientMgr, entity.getId())));
       }
     });
+    importTableBtn.setEnabled(false);
 
-    tree.addTreeSelectionListener(new TreeSelectionListener() {
-      public void valueChanged(TreeSelectionEvent e) {
-        final SynClient.Entity entity = getSelectedEntity();
-        if (entity == null) {
-          infoPane.setText("");
-        } else {
-          setEntityDescription(entity);
-          final ResultTask<String> descriptionIdTask = client.newDescriptionIdTask(entity.getId());
-          taskMgr.execute(new TaskIterator(descriptionIdTask, new GetDescription(entity, descriptionIdTask)));
-        }
-
-        if (entity != null && entity.getType().endsWith("FileEntity")) {
-          importNetworkBtn.setEnabled(true);
-          importTableBtn.setEnabled(true);
-        } else {
-          importNetworkBtn.setEnabled(false);
-          importTableBtn.setEnabled(false);
-        }
-      }
-    });
+    tree.addTreeSelectionListener(new UpdateDescriptionAndImportButtons());
 
     final JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
     buttonsPanel.add(importNetworkBtn);
@@ -129,6 +123,40 @@ class BrowserDialog {
       return null;
     }
     return (SynClient.Entity) selection;
+  }
+
+  private static String getExtension(final String name) {
+    final String[] pieces = name.split("\\.");
+    if (pieces == null)
+      return null;
+    return pieces[pieces.length - 1];
+  }
+
+  class UpdateDescriptionAndImportButtons implements TreeSelectionListener {
+    public void valueChanged(TreeSelectionEvent e) {
+      final SynClient.Entity entity = getSelectedEntity();
+      if (entity == null) {
+        infoPane.setText("");
+      } else {
+        setEntityDescription(entity);
+        final ResultTask<String> descriptionIdTask = client.newDescriptionIdTask(entity.getId());
+        taskMgr.execute(new TaskIterator(descriptionIdTask, new GetDescription(entity, descriptionIdTask)));
+      }
+
+      boolean enableNetworkBtn = false;
+      boolean enableTableBtn = false;
+      if (entity != null && entity.getType().endsWith("FileEntity")) {
+        final String extension = getExtension(entity.getName());
+        if (extension == null) {
+          enableNetworkBtn = enableTableBtn = true;
+        } else {
+          enableNetworkBtn = importerMgr.doesImporterExist(extension, DataCategory.NETWORK);
+          enableTableBtn = importerMgr.doesImporterExist(extension, DataCategory.TABLE);
+        }
+      }
+      importNetworkBtn.setEnabled(enableNetworkBtn);
+      importTableBtn.setEnabled(enableTableBtn);
+    }
   }
 
   class AddProjects extends AbstractTask {

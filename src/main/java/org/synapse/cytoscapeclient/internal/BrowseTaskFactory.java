@@ -13,14 +13,23 @@ public class BrowseTaskFactory extends AbstractTaskFactory {
   final SynClientMgr clientMgr;
   final TaskManager taskMgr;
   final AuthCacheMgr authCacheMgr;
+  final ImporterMgr importerMgr;
   final LoadNetworkFileTaskFactory loadNetworkFileTF;
   final LoadTableFileTaskFactory loadTableFileTF;
 
-  public BrowseTaskFactory(final CySwingApplication cySwingApp, final SynClientMgr clientMgr, final TaskManager taskMgr, final AuthCacheMgr authCacheMgr, final LoadNetworkFileTaskFactory loadNetworkFileTF, final LoadTableFileTaskFactory loadTableFileTF) {
+  public BrowseTaskFactory(
+        final CySwingApplication cySwingApp,
+        final SynClientMgr clientMgr,
+        final TaskManager taskMgr,
+        final AuthCacheMgr authCacheMgr,
+        final ImporterMgr importerMgr,
+        final LoadNetworkFileTaskFactory loadNetworkFileTF,
+        final LoadTableFileTaskFactory loadTableFileTF) {
     this.cySwingApp = cySwingApp;
     this.clientMgr = clientMgr;
     this.taskMgr = taskMgr;
     this.authCacheMgr = authCacheMgr;
+    this.importerMgr = importerMgr;
     this.loadNetworkFileTF = loadNetworkFileTF;
     this.loadTableFileTF = loadTableFileTF;
   }
@@ -30,7 +39,7 @@ public class BrowseTaskFactory extends AbstractTaskFactory {
     if (clientMgr.get() == null) {
       iterator.append(new LoginTask(clientMgr, authCacheMgr));
     }
-    iterator.append(new BrowseTask(cySwingApp, clientMgr, taskMgr, loadNetworkFileTF, loadTableFileTF));
+    iterator.append(new BrowseTask(cySwingApp, clientMgr, taskMgr, importerMgr, loadNetworkFileTF, loadTableFileTF));
     return iterator;
   }
 

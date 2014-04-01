@@ -12,13 +12,21 @@ public class BrowseTask extends AbstractTask {
   final CySwingApplication cySwingApp;
   final SynClientMgr clientMgr;
   final TaskManager taskMgr;
+  final ImporterMgr importerMgr;
   final LoadNetworkFileTaskFactory loadNetworkFileTF;
   final LoadTableFileTaskFactory loadTableFileTF;
 
-  public BrowseTask(final CySwingApplication cySwingApp, final SynClientMgr clientMgr, final TaskManager taskMgr, final LoadNetworkFileTaskFactory loadNetworkFileTF, final LoadTableFileTaskFactory loadTableFileTF) {
+  public BrowseTask(
+        final CySwingApplication cySwingApp,
+        final SynClientMgr clientMgr,
+        final TaskManager taskMgr,
+        final ImporterMgr importerMgr,
+        final LoadNetworkFileTaskFactory loadNetworkFileTF,
+        final LoadTableFileTaskFactory loadTableFileTF) {
     this.cySwingApp = cySwingApp;
     this.clientMgr = clientMgr;
     this.taskMgr = taskMgr;
+    this.importerMgr = importerMgr;
     this.loadNetworkFileTF = loadNetworkFileTF;
     this.loadTableFileTF = loadTableFileTF;
   }
@@ -26,7 +34,7 @@ public class BrowseTask extends AbstractTask {
   public void run(final TaskMonitor monitor) {
     SwingUtilities.invokeLater(new Runnable() {
       public void run() {
-        new BrowserDialog(cySwingApp.getJFrame(), clientMgr, taskMgr, loadNetworkFileTF, loadTableFileTF);
+        new BrowserDialog(cySwingApp.getJFrame(), clientMgr, taskMgr, importerMgr, loadNetworkFileTF, loadTableFileTF);
       }
     });
   }

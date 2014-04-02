@@ -181,7 +181,7 @@ public class SynClient {
   public ResultTask<UserProfile> newUserProfileTask() {
     return new ReqTask<UserProfile>() {
       protected UserProfile checkedRun(final TaskMonitor monitor) throws Exception {
-        monitor.setStatusMessage("Attempting to retrieve login credentials");
+        monitor.setTitle("Get Synapse user profile");
         final HttpResponse resp = super.exec(new HttpGet(join(REPO_ENDPOINT, "/userProfile/")));
         if (resp == null)
           return null;
@@ -207,6 +207,7 @@ public class SynClient {
   public ResultTask<SynFile> newFileTask(final String entityId) {
     return new ReqTask<SynFile>() {
       protected SynFile checkedRun(final TaskMonitor monitor) throws Exception {
+        monitor.setTitle("Download file " + entityId);
         monitor.setProgress(-1);
 
         // get info about the entity
@@ -260,6 +261,7 @@ public class SynClient {
   public ResultTask<List<Entity>> newProjectsTask(final UserProfile userProfile) {
     return new ReqTask<List<Entity>>() {
       protected List<Entity> checkedRun(final TaskMonitor monitor) throws Exception {
+        monitor.setTitle("Get projects created by " + userProfile.getUserName());
         final String query = join("SELECT id, name, concreteType FROM project WHERE project.createdByPrincipalId == ", userProfile.getOwnerId());
         final JsonNode jroot = toJson(super.exec(new HttpGet(join(REPO_ENDPOINT, "/query?", query("query", query)))));
         if (jroot == null)
@@ -281,6 +283,7 @@ public class SynClient {
   public ResultTask<List<Entity>> newChildrenTask(final String parentId) {
     return new ReqTask<List<Entity>>() {
       protected List<Entity> checkedRun(final TaskMonitor monitor) throws Exception {
+        monitor.setTitle("Get child entities of " + parentId);
         final List<Entity> children = new ArrayList<Entity>();
         final JsonNode jchildren = toJson(super.exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", parentId, "/children"))));
         if (jchildren == null)
@@ -306,6 +309,7 @@ public class SynClient {
   public ResultTask<String> newDescriptionIdTask(final String entityId) {
     return new ReqTask<String>() {
       protected String checkedRun(final TaskMonitor monitor) throws Exception {
+        monitor.setTitle("Get description info of " + entityId);
         final HttpResponse response = super.exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", entityId, "/wiki2")));
         if (response == null)
           return null;
@@ -321,6 +325,7 @@ public class SynClient {
   public ResultTask<String> newDescriptionMarkdownTask(final String entityId, final String descriptionId) {
     return new ReqTask<String>() {
       protected String checkedRun(final TaskMonitor monitor) throws Exception {
+        monitor.setTitle("Get description of " + entityId);
         final HttpResponse response = super.exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", entityId, "/wiki2/", descriptionId, "/markdown")));
         if (response == null)
           return null;

@@ -22,6 +22,9 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 import javax.swing.JPopupMenu;
 import javax.swing.JMenuItem;
+import javax.swing.JLabel;
+import javax.swing.ImageIcon;
+import javax.swing.SwingUtilities;
 
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
@@ -48,6 +51,8 @@ class BrowserDialog {
   final JButton importNetworkBtn;
   final JButton importTableBtn;
   final Markdown4jProcessor mdProcessor = new Markdown4jProcessor();
+  final JLabel loadingLabel;
+  final AsyncTaskMgr asyncTaskMgr;
 
   public BrowserDialog(
         final Frame parent,
@@ -64,6 +69,10 @@ class BrowserDialog {
     infoPane = new JEditorPane("text/html", "");
     infoPane.setEditable(false);
     tree = new JTree(model);
+    loadingLabel = new JLabel();
+    loadingLabel.setIcon(new ImageIcon(getClass().getResource("/img/loading.gif")));
+    loadingLabel.setVisible(false);
+    this.asyncTaskMgr = new AsyncTaskMgr(this);
 
     importNetworkBtn = new JButton("Import as Network");
     importNetworkBtn.addActionListener(new ActionListener() {
@@ -96,14 +105,15 @@ class BrowserDialog {
 
     dialog.setLayout(new GridBagLayout());
     final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JScrollPane(tree), secondaryPanel);
-    splitPane.setResizeWeight(0.5);
+    splitPane.setResizeWeight(0.85);
     dialog.add(splitPane, e.reset().expandHV());
+    dialog.add(loadingLabel, e.expandH().insets(3, 4, 5, 0).down());
 
     dialog.pack();
     dialog.setVisible(true);
 
     final ResultTask<SynClient.UserProfile> userProfileTask = client.newUserProfileTask();
-    taskMgr.execute(new TaskIterator(userProfileTask, new AbstractTask() {
+    asyncTaskMgr.execute(new TaskIterator(userProfileTask, new AbstractTask() {
       public void run(TaskMonitor monitor) {
         final ResultTask<List<SynClient.Entity>> projectsTask = client.newProjectsTask(userProfileTask.get());
         super.insertTasksAfterCurrentTask(projectsTask, new AddProjects(userProfileTask, projectsTask));
@@ -111,6 +121,20 @@ class BrowserDialog {
 
       public void cancel() {}
     }));
+  }
+
+  public void setLoadingText(final String text) {
+    SwingUtilities.invokeLater(new Runnable() {
+      public void run() {
+        if (!loadingLabel.isVisible())
+          loadingLabel.setVisible(true);
+        loadingLabel.setText(text);
+      }
+    });
+  }
+
+  public void loadingDone() {
+    loadingLabel.setVisible(false);
   }
 
   private SynClient.Entity getSelectedEntity() {
@@ -140,7 +164,7 @@ class BrowserDialog {
       } else {
         setEntityDescription(entity);
         final ResultTask<String> descriptionIdTask = client.newDescriptionIdTask(entity.getId());
-        taskMgr.execute(new TaskIterator(descriptionIdTask, new GetDescription(entity, descriptionIdTask)));
+        asyncTaskMgr.execute(new TaskIterator(descriptionIdTask, new GetDescription(entity, descriptionIdTask)));
       }
 
       boolean enableNetworkBtn = false;

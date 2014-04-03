@@ -154,24 +154,32 @@ public class SynClient {
   abstract class ReqTask<T> extends ResultTask<T> {
     protected volatile boolean cancelled = false;
     volatile HttpUriRequest req = null;
+    volatile CloseableHttpResponse resp = null;
 
     protected HttpResponse exec(final HttpUriRequest req) throws Exception {
       this.req = req;
-      CloseableHttpResponse resp = null;
+      closeResponse();
       try {
         resp = client.execute(req);
         return resp;
       } catch (Exception e) {
+        closeResponse();
         if (!cancelled) { // ignore exceptions thrown if cancelled
           throw e;
         }
       } finally {
-        try {
-          resp.close();
-        } catch (IOException e) {}
         this.req = null;
       }
       return null;
+    }
+
+    protected void closeResponse() {
+      if (resp == null)
+        return;
+      try {
+        resp.close();
+      } catch (IOException e) {}
+      resp = null;
     }
 
     public void cancel() {
@@ -180,6 +188,7 @@ public class SynClient {
       if (req2 != null) {
         req2.abort();
       }
+      closeResponse();
     }
   }
 
@@ -191,6 +200,7 @@ public class SynClient {
         if (resp == null)
           return null;
         final JsonNode root = toJson(resp);
+        closeResponse();
         return new UserProfile(root.get("ownerId").asText(), root.get("userName").asText());
       }
     };
@@ -220,6 +230,7 @@ public class SynClient {
         final JsonNode entityInfo = toJson(super.exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", entityId, "/bundle?mask=1"))));
         if (entityInfo == null)
           return null;
+        closeResponse();
 
         // ensure that it's a file
         final String entityType = entityInfo.get("entityType").asText();
@@ -257,6 +268,7 @@ public class SynClient {
         }
         output.close();
         input.close();
+        closeResponse();
 
         return new SynFile(file, filename);
       }
@@ -271,6 +283,7 @@ public class SynClient {
         final JsonNode jroot = toJson(super.exec(new HttpGet(join(REPO_ENDPOINT, "/query?", query("query", query)))));
         if (jroot == null)
           return null;
+        closeResponse();
         final JsonNode jprojects = jroot.get("results");
         final List<Entity> projects = new ArrayList<Entity>();
         for (final JsonNode jproject : jprojects) {
@@ -293,6 +306,7 @@ public class SynClient {
         final JsonNode jchildren = toJson(super.exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", parentId, "/children"))));
         if (jchildren == null)
           return null;
+        closeResponse();
         for (final JsonNode jchild : jchildren.get("idList")) {
           if (super.cancelled)
             return null;
@@ -300,6 +314,7 @@ public class SynClient {
           final JsonNode jinfo = toJson(super.exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", id, "/bundle?mask=", Integer.toString(0x1 | 0x20)))));
           if (jinfo == null)
             return null;
+          closeResponse();
           final JsonNode jentity = jinfo.get("entity");
           final String name = jentity.get("name").textValue();
           final String type = jentity.get("entityType").textValue();
@@ -319,9 +334,12 @@ public class SynClient {
         if (response == null)
           return null;
         final int statusCode = response.getStatusLine().getStatusCode();
-        if (statusCode == 404)
+        if (statusCode == 404) {
+          closeResponse();
           return null;
+        }
         final JsonNode jinfo = toJson(response);
+        closeResponse();
         return jinfo.get("id").textValue();
       }
     };
@@ -360,6 +378,7 @@ public class SynClient {
         input.close();
 
         final String encoding = entity.getContentEncoding() == null ? "UTF-8" : entity.getContentEncoding().getValue();
+        closeResponse();
         return new String(output.toByteArray(), Charset.forName(encoding));
       }
     };

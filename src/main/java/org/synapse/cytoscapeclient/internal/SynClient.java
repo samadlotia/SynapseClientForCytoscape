@@ -19,10 +19,11 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.protocol.HttpContext;
 
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.CloseableHttpClient;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -122,7 +123,7 @@ public class SynClient {
   static final String AUTH_ENDPOINT = "https://auth-prod.prod.sagebase.org/auth/v1";
   static final String REPO_ENDPOINT = "https://repo-prod.prod.sagebase.org/repo/v1";
 
-  final HttpClient client;
+  final CloseableHttpClient client;
 
   public SynClient(final HttpRequestInterceptor auth) {
     client = 
@@ -156,14 +157,18 @@ public class SynClient {
 
     protected HttpResponse exec(final HttpUriRequest req) throws Exception {
       this.req = req;
+      CloseableHttpResponse resp = null;
       try {
-        final HttpResponse resp = client.execute(req);
+        resp = client.execute(req);
         return resp;
       } catch (Exception e) {
         if (!cancelled) { // ignore exceptions thrown if cancelled
           throw e;
         }
       } finally {
+        try {
+          resp.close();
+        } catch (IOException e) {}
         this.req = null;
       }
       return null;

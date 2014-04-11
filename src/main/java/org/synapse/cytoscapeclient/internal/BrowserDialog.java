@@ -4,12 +4,23 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
+import java.awt.Color;
+import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Frame;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.GridBagLayout;
+import java.awt.BasicStroke;
+import java.awt.Stroke;
+import java.awt.RenderingHints;
+
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
+import java.awt.geom.RoundRectangle2D;
+
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JPanel;
 import javax.swing.JEditorPane;
@@ -17,6 +28,7 @@ import javax.swing.JDialog;
 import javax.swing.JTree;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.JTextField;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
@@ -25,6 +37,8 @@ import javax.swing.JMenuItem;
 import javax.swing.JLabel;
 import javax.swing.ImageIcon;
 import javax.swing.SwingUtilities;
+
+import javax.swing.border.AbstractBorder;
 
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
@@ -53,6 +67,7 @@ class BrowserDialog {
   final Markdown4jProcessor mdProcessor = new Markdown4jProcessor();
   final JLabel loadingLabel;
   final AsyncTaskMgr asyncTaskMgr;
+  final JTextField searchField;
 
   public BrowserDialog(
         final Frame parent,
@@ -73,6 +88,9 @@ class BrowserDialog {
     loadingLabel.setIcon(new ImageIcon(getClass().getResource("/img/loading.gif")));
     loadingLabel.setVisible(false);
     this.asyncTaskMgr = new AsyncTaskMgr(this);
+    searchField = new JTextField();
+    searchField.setOpaque(false);
+    searchField.setBorder(BorderFactory.createEmptyBorder());
 
     importNetworkBtn = new JButton("Import as Network");
     importNetworkBtn.addActionListener(new ActionListener() {
@@ -94,19 +112,35 @@ class BrowserDialog {
 
     tree.addTreeSelectionListener(new UpdateDescriptionAndImportButtons());
 
+    final EasyGBC e = new EasyGBC();
+    final JLabel searchLabel = new JLabel(new ImageIcon(getClass().getResource("/img/search-icon.png")));
+    final JPanel searchPanel = new JPanel(new GridBagLayout());
+
+    final JButton cancelButton = new JButton(new ImageIcon(getClass().getResource("/img/cancel-icon.png")));
+    cancelButton.setEnabled(false);
+    cancelButton.setBorder(BorderFactory.createEmptyBorder());
+    cancelButton.setBorderPainted(false);
+    cancelButton.setContentAreaFilled(false);
+    cancelButton.setFocusPainted(false);
+
+    searchPanel.setBorder(new SearchPanelBorder());
+    searchPanel.add(searchLabel, e.insets(4, 6, 4, 0));
+    searchPanel.add(searchField, e.right().expandH().insets(4, 6, 4, 0));
+    searchPanel.add(cancelButton, e.right().noExpand().insets(4, 2, 4, 6));
+
     final JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
     buttonsPanel.add(importNetworkBtn);
     buttonsPanel.add(importTableBtn);
 
     final JPanel secondaryPanel = new JPanel(new GridBagLayout());
-    final EasyGBC e = new EasyGBC();
-    secondaryPanel.add(new JScrollPane(infoPane), e.expandHV());
+    secondaryPanel.add(new JScrollPane(infoPane), e.reset().expandHV());
     secondaryPanel.add(buttonsPanel, e.expandH().down());
 
     dialog.setLayout(new GridBagLayout());
     final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JScrollPane(tree), secondaryPanel);
     splitPane.setResizeWeight(0.85);
-    dialog.add(splitPane, e.reset().expandHV());
+    dialog.add(searchPanel, e.reset().expandH().insets(3, 3, 1, 3));
+    dialog.add(splitPane, e.down().expandHV().noInsets());
     dialog.add(loadingLabel, e.expandH().insets(3, 4, 5, 0).down());
 
     dialog.pack();
@@ -290,5 +324,35 @@ class BrowserDialog {
     }
 
     public void cancel() {}
+  }
+}
+
+class SearchPanelBorder extends AbstractBorder {
+  final static float ARC = 6.0f;
+  final static Color BORDER_COLOR = new Color(0x606060);
+  final static Color BKGND_COLOR = Color.WHITE;
+  final static Stroke BORDER_STROKE = new BasicStroke(1.0f);
+
+  final RoundRectangle2D.Float borderShape = new RoundRectangle2D.Float();
+  public void paintBorder(final Component c, final Graphics g, final int x, final int y, final int w, final int h) {
+    final Graphics2D g2d = (Graphics2D) g;
+
+    final boolean aa = RenderingHints.VALUE_ANTIALIAS_ON.equals(g2d.getRenderingHint(RenderingHints.KEY_ANTIALIASING));
+    final Color oldColor = g2d.getColor();
+    final Stroke oldStroke = g2d.getStroke();
+
+    borderShape.setRoundRect((float) x, (float) y, (float) (w - 1), (float) (h - 1), ARC, ARC);
+    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+    g2d.setColor(BKGND_COLOR);
+    g2d.fill(borderShape);
+
+    g2d.setColor(BORDER_COLOR);
+    g2d.setStroke(BORDER_STROKE);
+    g2d.draw(borderShape);
+
+    g2d.setColor(oldColor);
+    g2d.setStroke(oldStroke);
+    g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa ? RenderingHints.VALUE_ANTIALIAS_ON : RenderingHints.VALUE_ANTIALIAS_OFF);
   }
 }

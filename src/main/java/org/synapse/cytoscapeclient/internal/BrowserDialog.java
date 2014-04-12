@@ -169,8 +169,8 @@ class BrowserDialog {
     buttonsPanel.add(importTableBtn);
 
     final JPanel primaryPanel = new JPanel(new GridBagLayout());
-    primaryPanel.add(searchPanel, e.reset().expandH().insets(3, 5, 2, 5));
-    primaryPanel.add(new JScrollPane(tree), e.down().expandHV());
+    primaryPanel.add(searchPanel, e.reset().expandH().insets(3, 5, 2, 0));
+    primaryPanel.add(new JScrollPane(tree), e.down().noInsets().expandHV());
 
     final JPanel secondaryPanel = new JPanel(new GridBagLayout());
     secondaryPanel.add(new JScrollPane(infoPane), e.reset().expandHV());

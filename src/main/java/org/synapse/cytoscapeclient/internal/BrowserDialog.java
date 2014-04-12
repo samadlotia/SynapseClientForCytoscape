@@ -1,5 +1,6 @@
 package org.synapse.cytoscapeclient.internal;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -22,6 +23,8 @@ import java.awt.geom.RoundRectangle2D;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JPanel;
 import javax.swing.JEditorPane;
 import javax.swing.JDialog;
@@ -120,7 +123,6 @@ class BrowserDialog {
 
     final EasyGBC e = new EasyGBC();
     final JLabel searchLabel = new JLabel(new ImageIcon(getClass().getResource("/img/search-icon.png")));
-    final JPanel searchPanel = new JPanel(new GridBagLayout());
 
     final JButton cancelButton = new JButton(new ImageIcon(getClass().getResource("/img/cancel-icon.png")));
     cancelButton.setEnabled(false);
@@ -149,10 +151,18 @@ class BrowserDialog {
       }
     });
 
-    searchPanel.setBorder(new SearchPanelBorder());
-    searchPanel.add(searchLabel, e.insets(4, 6, 4, 0));
-    searchPanel.add(searchField, e.right().expandH().insets(4, 6, 4, 0));
-    searchPanel.add(cancelButton, e.right().noExpand().insets(4, 2, 4, 6));
+    final JPanel innerSearchPanel = new JPanel(new GridBagLayout());
+    innerSearchPanel.setBorder(new SearchPanelBorder());
+    innerSearchPanel.add(searchLabel, e.insets(4, 6, 4, 0));
+    innerSearchPanel.add(searchField, e.right().expandH().insets(4, 6, 4, 0));
+    innerSearchPanel.add(cancelButton, e.right().noExpand().insets(4, 2, 4, 6));
+
+    final JComboBox entityTypeCombo = new JComboBox(SynClient.EntityType.values());
+    final JCheckBox onlyBtn = new JCheckBox("Only: ");
+    final JPanel searchPanel = new JPanel(new GridBagLayout());
+    searchPanel.add(innerSearchPanel, e.reset().expandH().insets(0, 0, 0, 7));
+    searchPanel.add(onlyBtn, e.right().noExpand());
+    searchPanel.add(entityTypeCombo, e.right());
 
     final JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
     buttonsPanel.add(importNetworkBtn);

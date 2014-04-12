@@ -2,10 +2,12 @@ package org.synapse.cytoscapeclient.internal;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.FileOutputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.util.zip.GZIPInputStream;
 import java.nio.charset.Charset;
 
@@ -20,13 +22,24 @@ import org.apache.http.HttpResponse;
 import org.apache.http.protocol.HttpContext;
 
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.entity.InputStreamEntity;
+import org.apache.http.entity.ContentType;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.TreeNode;
+import com.fasterxml.jackson.core.JsonEncoding;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.cytoscape.work.TaskMonitor;
 
@@ -95,6 +108,27 @@ public class SynClient {
     }
   }
 
+  public static enum EntityType {
+    PROJECT("Project", "project"),
+    FILE("File", "file"),
+    FOLDER("Folder", "folder");
+
+    final String userName;
+    final String searchName;
+    EntityType(final String userName, final String searchName) {
+      this.userName = userName;
+      this.searchName = searchName;
+    }
+
+    public String toString() {
+      return userName;
+    }
+
+    public String getSearchName() {
+      return searchName;
+    }
+  }
+
   private static String join(String ... pieces) {
     final int len = pieces.length;
     final StringBuffer buffer = new StringBuffer();
@@ -119,6 +153,9 @@ public class SynClient {
     }
     return buffer.toString();
   }
+
+  final JsonFactory jsonFactory = new JsonFactory();
+  final JsonNodeFactory jsonNodeFactory = new JsonNodeFactory(false);
 
   static final String AUTH_ENDPOINT = "https://auth-prod.prod.sagebase.org/auth/v1";
   static final String REPO_ENDPOINT = "https://repo-prod.prod.sagebase.org/repo/v1";
@@ -149,6 +186,18 @@ public class SynClient {
     } catch (IOException e) {
       throw new SynClientException("Unable to read response", e);
     }
+  }
+
+  private HttpPost newPostJson(final String url, final TreeNode jobj) throws UnsupportedEncodingException, IOException {
+    final ByteArrayOutputStream output = new ByteArrayOutputStream();
+    final JsonGenerator generator = jsonFactory.createGenerator(output, JsonEncoding.UTF8);
+    generator.writeTree(jobj);
+    output.flush();
+    output.close();
+    final ByteArrayInputStream input = new ByteArrayInputStream(output.toByteArray());
+    final HttpPost post = new HttpPost(url);
+    post.setEntity(new InputStreamEntity(input, ContentType.APPLICATION_JSON));
+    return post;
   }
 
   abstract class ReqTask<T> extends ResultTask<T> {
@@ -380,6 +429,26 @@ public class SynClient {
         final String encoding = entity.getContentEncoding() == null ? "UTF-8" : entity.getContentEncoding().getValue();
         closeResponse();
         return new String(output.toByteArray(), Charset.forName(encoding));
+      }
+    };
+  }
+
+  public ResultTask<List<Entity>> newSearchTask(final String queryTerm, final EntityType entityType) {
+    return new ReqTask<List<Entity>>() {
+      protected List<Entity> checkedRun(final TaskMonitor monitor) throws Exception {
+        monitor.setTitle("Search for " + queryTerm);
+        final ObjectNode jquery = jsonNodeFactory.objectNode().put("queryTerm", queryTerm);
+        if (entityType != null) {
+          jquery.put(
+            "booleanQuery",
+            jsonNodeFactory.objectNode()
+              .put("key",  "node_type")
+              .put("value", entityType.getSearchName()));
+        }
+        final JsonNode jresults = toJson(super.exec(newPostJson(join(REPO_ENDPOINT, "/search"), jquery)));
+        final List<Entity> entities = new ArrayList<Entity>();
+        // TODO
+        return entities;
       }
     };
   }

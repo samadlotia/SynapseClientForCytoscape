@@ -43,6 +43,9 @@ import javax.swing.border.AbstractBorder;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+
 import org.markdown4j.Markdown4jProcessor;
 
 import org.cytoscape.work.TaskManager;
@@ -79,18 +82,21 @@ class BrowserDialog {
     client = clientMgr.get();
     this.taskMgr = taskMgr;
     this.importerMgr = importerMgr;
+
     dialog = new JDialog(parent, "Browse Synapse", false);
+
     model = new DefaultTreeModel(new DefaultMutableTreeNode());
+
     infoPane = new JEditorPane("text/html", "");
     infoPane.setEditable(false);
+
     tree = new JTree(model);
+
     loadingLabel = new JLabel();
     loadingLabel.setIcon(new ImageIcon(getClass().getResource("/img/loading.gif")));
     loadingLabel.setVisible(false);
+
     this.asyncTaskMgr = new AsyncTaskMgr(this);
-    searchField = new JTextField();
-    searchField.setOpaque(false);
-    searchField.setBorder(BorderFactory.createEmptyBorder());
 
     importNetworkBtn = new JButton("Import as Network");
     importNetworkBtn.addActionListener(new ActionListener() {
@@ -122,6 +128,26 @@ class BrowserDialog {
     cancelButton.setBorderPainted(false);
     cancelButton.setContentAreaFilled(false);
     cancelButton.setFocusPainted(false);
+
+    searchField = new JTextField();
+    searchField.setOpaque(false);
+    searchField.setBorder(BorderFactory.createEmptyBorder());
+    searchField.getDocument().addDocumentListener(new DocumentListener() {
+      public void changedUpdate(DocumentEvent e) { update(); }
+      public void insertUpdate(DocumentEvent e) { update(); }
+      public void removeUpdate(DocumentEvent e) { update(); }
+
+      private void update() {
+        cancelButton.setEnabled(searchField.getText().length() > 0);
+      }
+    });
+
+    cancelButton.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        searchField.setText("");
+        searchField.requestFocus();
+      }
+    });
 
     searchPanel.setBorder(new SearchPanelBorder());
     searchPanel.add(searchLabel, e.insets(4, 6, 4, 0));

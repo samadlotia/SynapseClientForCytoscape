@@ -132,14 +132,17 @@ class BrowserDialog {
     buttonsPanel.add(importNetworkBtn);
     buttonsPanel.add(importTableBtn);
 
+    final JPanel primaryPanel = new JPanel(new GridBagLayout());
+    primaryPanel.add(searchPanel, e.reset().expandH().insets(3, 5, 2, 5));
+    primaryPanel.add(new JScrollPane(tree), e.down().expandHV());
+
     final JPanel secondaryPanel = new JPanel(new GridBagLayout());
     secondaryPanel.add(new JScrollPane(infoPane), e.reset().expandHV());
     secondaryPanel.add(buttonsPanel, e.expandH().down());
 
     dialog.setLayout(new GridBagLayout());
-    final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JScrollPane(tree), secondaryPanel);
+    final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, primaryPanel, secondaryPanel);
     splitPane.setResizeWeight(0.85);
-    dialog.add(searchPanel, e.reset().expandH().insets(3, 3, 3, 3));
     dialog.add(splitPane, e.down().expandHV().noInsets());
     dialog.add(loadingLabel, e.expandH().insets(3, 4, 5, 0).down());
 

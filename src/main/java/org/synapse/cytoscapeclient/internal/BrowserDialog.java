@@ -161,7 +161,7 @@ class BrowserDialog {
     final JCheckBox onlyBtn = new JCheckBox("Only: ");
     final JPanel searchPanel = new JPanel(new GridBagLayout());
     searchPanel.add(innerSearchPanel, e.reset().expandH().insets(0, 0, 0, 7));
-    searchPanel.add(onlyBtn, e.right().noExpand());
+    searchPanel.add(onlyBtn, e.noInsets().right().noExpand());
     searchPanel.add(entityTypeCombo, e.right());
 
     final JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -169,8 +169,8 @@ class BrowserDialog {
     buttonsPanel.add(importTableBtn);
 
     final JPanel primaryPanel = new JPanel(new GridBagLayout());
-    primaryPanel.add(searchPanel, e.reset().expandH().insets(3, 5, 2, 5));
-    primaryPanel.add(new JScrollPane(tree), e.down().expandHV());
+    primaryPanel.add(searchPanel, e.reset().expandH().insets(3, 5, 2, 0));
+    primaryPanel.add(new JScrollPane(tree), e.down().noInsets().expandHV());
 
     final JPanel secondaryPanel = new JPanel(new GridBagLayout());
     secondaryPanel.add(new JScrollPane(infoPane), e.reset().expandHV());

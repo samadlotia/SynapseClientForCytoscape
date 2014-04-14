@@ -39,6 +39,7 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.core.JsonEncoding;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.cytoscape.work.TaskMonitor;
@@ -83,12 +84,12 @@ public class SynClient {
   public static class Entity {
     final String id;
     final String name;
-    final String type;
+    final EntityType type;
 
     public Entity(final String id, final String name, final String type) {
       this.id = id;
       this.name = name;
-      this.type = type;
+      this.type = EntityType.guess(type);
     }
 
     public String getId() {
@@ -99,7 +100,7 @@ public class SynClient {
       return name;
     }
 
-    public String getType() {
+    public EntityType getType() {
       return type;
     }
 
@@ -114,18 +115,29 @@ public class SynClient {
     FOLDER("Folder", "folder");
 
     final String userName;
-    final String searchName;
-    EntityType(final String userName, final String searchName) {
+    final String alias;
+    EntityType(final String userName, final String alias) {
       this.userName = userName;
-      this.searchName = searchName;
+      this.alias = alias;
     }
 
     public String toString() {
       return userName;
     }
 
-    public String getSearchName() {
-      return searchName;
+    public String getAlias() {
+      return alias;
+    }
+
+    public static EntityType guess(final String typeStr) {
+      final String typeStrLower = typeStr.toLowerCase();
+      for (final EntityType type : values()) {
+        final String alias = type.getAlias();
+        if (typeStrLower.endsWith(alias) || typeStrLower.endsWith(alias + "entity")) {
+          return type;
+        }
+      }
+      return null;
     }
   }
 
@@ -153,9 +165,6 @@ public class SynClient {
     }
     return buffer.toString();
   }
-
-  final JsonFactory jsonFactory = new JsonFactory();
-  final JsonNodeFactory jsonNodeFactory = new JsonNodeFactory(false);
 
   static final String AUTH_ENDPOINT = "https://auth-prod.prod.sagebase.org/auth/v1";
   static final String REPO_ENDPOINT = "https://repo-prod.prod.sagebase.org/repo/v1";
@@ -190,6 +199,8 @@ public class SynClient {
 
   private HttpPost newPostJson(final String url, final TreeNode jobj) throws UnsupportedEncodingException, IOException {
     final ByteArrayOutputStream output = new ByteArrayOutputStream();
+    final ObjectMapper mapper = new ObjectMapper();
+    final JsonFactory jsonFactory = mapper.getFactory();
     final JsonGenerator generator = jsonFactory.createGenerator(output, JsonEncoding.UTF8);
     generator.writeTree(jobj);
     output.flush();
@@ -437,17 +448,27 @@ public class SynClient {
     return new ReqTask<List<Entity>>() {
       protected List<Entity> checkedRun(final TaskMonitor monitor) throws Exception {
         monitor.setTitle("Search for " + queryTerm);
-        final ObjectNode jquery = jsonNodeFactory.objectNode().put("queryTerm", queryTerm);
+        final ObjectMapper mapper = new ObjectMapper();
+        final JsonNodeFactory jsonNodeFactory = mapper.getNodeFactory();
+        // Jackson doesn't support proper chaining when adding fields with JsonNodes as values :(
+        final ObjectNode jquery = jsonNodeFactory.objectNode();
+        jquery.set("queryTerm",    jsonNodeFactory.arrayNode().add(queryTerm));
+        jquery.set("returnFields", jsonNodeFactory.arrayNode().add("name").add("id").add("node_type_r"));
         if (entityType != null) {
-          jquery.put(
-            "booleanQuery",
-            jsonNodeFactory.objectNode()
-              .put("key",  "node_type")
-              .put("value", entityType.getSearchName()));
+          final ObjectNode jtype = jsonNodeFactory.objectNode();
+          jtype.put("key",  "node_type");
+          jtype.put("value", entityType.getAlias());
+          jquery.set("booleanQuery", jsonNodeFactory.arrayNode().add(jtype));
         }
         final JsonNode jresults = toJson(super.exec(newPostJson(join(REPO_ENDPOINT, "/search"), jquery)));
+        closeResponse();
+
         final List<Entity> entities = new ArrayList<Entity>();
-        // TODO
+        for (final JsonNode jhit : jresults.get("hits")) {
+          entities.add(new Entity(jhit.get("id").textValue(),
+                                  jhit.get("name").textValue(),
+                                  jhit.get("node_type").textValue()));
+        }
         return entities;
       }
     };

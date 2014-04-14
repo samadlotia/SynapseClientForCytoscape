@@ -158,7 +158,23 @@ class BrowserDialog {
     innerSearchPanel.add(cancelButton, e.right().noExpand().insets(4, 2, 4, 6));
 
     final JComboBox entityTypeCombo = new JComboBox(SynClient.EntityType.values());
+    entityTypeCombo.setEnabled(false);
     final JCheckBox onlyBtn = new JCheckBox("Only: ");
+    onlyBtn.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        entityTypeCombo.setEnabled(onlyBtn.isSelected());
+      }
+    });
+
+    searchField.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        final String query = searchField.getText();
+        final SynClient.EntityType type = onlyBtn.isSelected() ? (SynClient.EntityType) entityTypeCombo.getSelectedItem() : null;
+        final ResultTask<List<SynClient.Entity>> searchTask = client.newSearchTask(query, type);
+        asyncTaskMgr.execute(new TaskIterator(searchTask, new ShowSearchResults(searchTask)));
+      }
+    });
+
     final JPanel searchPanel = new JPanel(new GridBagLayout());
     searchPanel.add(innerSearchPanel, e.reset().expandH().insets(0, 0, 0, 7));
     searchPanel.add(onlyBtn, e.noInsets().right().noExpand());
@@ -242,7 +258,7 @@ class BrowserDialog {
 
       boolean enableNetworkBtn = false;
       boolean enableTableBtn = false;
-      if (entity != null && entity.getType().endsWith("FileEntity")) {
+      if (entity != null && SynClient.EntityType.FILE.equals(entity.getType())) {
         final String extension = getExtension(entity.getName());
         if (extension == null) {
           enableNetworkBtn = enableTableBtn = true;
@@ -282,11 +298,6 @@ class BrowserDialog {
     public void cancel() {}
   }
 
-  static boolean hasChildren(final SynClient.Entity entity) {
-    final String type = entity.getType();
-    return type.endsWith("Folder");
-  }
-
   class AddChildren extends AbstractTask {
     final ResultTask<List<SynClient.Entity>> task;
     final DefaultMutableTreeNode parentNode;
@@ -304,7 +315,7 @@ class BrowserDialog {
         final DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(child);
         parentNode.add(childNode);
 
-        if (hasChildren(child)) {
+        if (SynClient.EntityType.FOLDER.equals(child.getType())) {
           final ResultTask<List<SynClient.Entity>> childrenTask = client.newChildrenTask(child.getId());
           super.insertTasksAfterCurrentTask(childrenTask, new AddChildren(childrenTask, childNode, child.getId()));
         }
@@ -360,6 +371,22 @@ class BrowserDialog {
       final String descriptionMd = descriptionTask.get();
       final String descriptionHtml = mdProcessor.process(descriptionMd);
       setEntityDescription(entity, descriptionHtml);
+    }
+
+    public void cancel() {}
+  }
+
+  class ShowSearchResults extends AbstractTask {
+    final ResultTask<List<SynClient.Entity>> searchTask;
+    public ShowSearchResults(final ResultTask<List<SynClient.Entity>> searchTask) {
+      this.searchTask = searchTask;
+    }
+
+    public void run(TaskMonitor monitor) throws Exception {
+      final List<SynClient.Entity> results = searchTask.get();
+      for (final SynClient.Entity entity : results) {
+        System.out.println(entity);
+      }
     }
 
     public void cancel() {}

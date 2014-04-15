@@ -31,24 +31,19 @@ public class CyActivator extends AbstractCyActivator {
     final ImporterMgr importerMgr = new ImporterMgr();
     registerServiceListener(bc, importerMgr, "addFactory", "removeFactory", InputStreamTaskFactory.class);
 
-    registerService(bc, new LoginTaskFactory(clientMgr, authCacheMgr), TaskFactory.class, ezProps(
-      ServiceProperties.TITLE, "Login...",
-      ServiceProperties.PREFERRED_MENU, "Apps.Synapse"
-    ));
-
     registerService(bc, new BrowseTaskFactory(cySwingApp, clientMgr, taskMgr, authCacheMgr, importerMgr, loadNetworkFileTF, loadTableFileTF), TaskFactory.class, ezProps(
-      ServiceProperties.TITLE, "Browse...",
-      ServiceProperties.PREFERRED_MENU, "Apps.Synapse"
+      ServiceProperties.TITLE, "Synapse...",
+      ServiceProperties.PREFERRED_MENU, "Apps"
     ));
 
     registerService(bc, new ImportNetworkFromSynapseTaskFactory(loadNetworkFileTF, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
-      ServiceProperties.TITLE, "From Synapse...",
-      ServiceProperties.PREFERRED_MENU, "File.Import.Network"
+      ServiceProperties.COMMAND, "import-network",
+      ServiceProperties.COMMAND_NAMESPACE, "synapse"
     ));
 
     registerService(bc, new ImportTableFromSynapseTaskFactory(loadTableFileTF, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
-      ServiceProperties.TITLE, "From Synapse...",
-      ServiceProperties.PREFERRED_MENU, "File.Import.Table"
+      ServiceProperties.COMMAND, "import-table",
+      ServiceProperties.COMMAND_NAMESPACE, "synapse"
     ));
   }
 

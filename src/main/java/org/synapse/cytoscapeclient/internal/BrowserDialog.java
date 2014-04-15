@@ -74,6 +74,7 @@ class BrowserDialog {
   final JLabel loadingLabel;
   final AsyncTaskMgr asyncTaskMgr;
   final JTextField searchField;
+  boolean showingSearchResults = false;
 
   public BrowserDialog(
         final Frame parent,
@@ -140,13 +141,16 @@ class BrowserDialog {
       public void removeUpdate(DocumentEvent e) { update(); }
 
       private void update() {
-        cancelButton.setEnabled(searchField.getText().length() > 0);
+        cancelButton.setEnabled(searchField.getText().length() > 0 || showingSearchResults);
       }
     });
 
     cancelButton.addActionListener(new ActionListener() {
       public void actionPerformed(ActionEvent e) {
         searchField.setText("");
+        if (showingSearchResults) {
+          showUserProjects();
+        }
         searchField.requestFocus();
       }
     });
@@ -171,7 +175,7 @@ class BrowserDialog {
         final String query = searchField.getText();
         final SynClient.EntityType type = onlyBtn.isSelected() ? (SynClient.EntityType) entityTypeCombo.getSelectedItem() : null;
         final ResultTask<List<SynClient.Entity>> searchTask = client.newSearchTask(query, type);
-        asyncTaskMgr.execute(new TaskIterator(searchTask, new ShowSearchResults(searchTask)));
+        asyncTaskMgr.execute(new TaskIterator(searchTask, new ShowSearchResults(query, searchTask)));
       }
     });
 
@@ -201,11 +205,15 @@ class BrowserDialog {
     dialog.pack();
     dialog.setVisible(true);
 
+    showUserProjects();
+  }
+
+  private void showUserProjects() {
     final ResultTask<SynClient.UserProfile> userProfileTask = client.newUserProfileTask();
     asyncTaskMgr.execute(new TaskIterator(userProfileTask, new AbstractTask() {
       public void run(TaskMonitor monitor) {
         final ResultTask<List<SynClient.Entity>> projectsTask = client.newProjectsTask(userProfileTask.get());
-        super.insertTasksAfterCurrentTask(projectsTask, new AddProjects(userProfileTask, projectsTask));
+        super.insertTasksAfterCurrentTask(projectsTask, new ShowUserProjects(userProfileTask, projectsTask));
       }
 
       public void cancel() {}
@@ -272,11 +280,11 @@ class BrowserDialog {
     }
   }
 
-  class AddProjects extends AbstractTask {
+  class ShowUserProjects extends AbstractTask {
     final ResultTask<SynClient.UserProfile> userProfileTask;
     final ResultTask<List<SynClient.Entity>> projectsTask;
 
-    public AddProjects(final ResultTask<SynClient.UserProfile> userProfileTask, final ResultTask<List<SynClient.Entity>> projectsTask) {
+    public ShowUserProjects(final ResultTask<SynClient.UserProfile> userProfileTask, final ResultTask<List<SynClient.Entity>> projectsTask) {
       this.userProfileTask = userProfileTask;
       this.projectsTask = projectsTask;
     }
@@ -285,14 +293,21 @@ class BrowserDialog {
       final List<SynClient.Entity> projects = projectsTask.get();
       if (projects == null)
         return;
-      final DefaultMutableTreeNode root = new DefaultMutableTreeNode(userProfileTask.get().getUserName());
-      for (final SynClient.Entity project : projects) {
-        final DefaultMutableTreeNode projectNode = new DefaultMutableTreeNode(project);
-        root.add(projectNode);
-        final ResultTask<List<SynClient.Entity>> childrenTask = client.newChildrenTask(project.getId());
-        super.insertTasksAfterCurrentTask(childrenTask, new AddChildren(childrenTask, projectNode, project.getId()));
+      final String userName = userProfileTask.get().getUserName();
+      DefaultMutableTreeNode root = null;
+      if (projects.size() == 0) {
+        root = new DefaultMutableTreeNode(String.format("%s: no projects found", userName));
+      } else {
+        root = new DefaultMutableTreeNode(userName);
+        for (final SynClient.Entity project : projects) {
+          final DefaultMutableTreeNode projectNode = new DefaultMutableTreeNode(project);
+          root.add(projectNode);
+          final ResultTask<List<SynClient.Entity>> childrenTask = client.newChildrenTask(project.getId());
+          super.insertTasksAfterCurrentTask(childrenTask, new AddChildren(childrenTask, projectNode, project.getId()));
+        }
       }
       model.setRoot(root);
+      showingSearchResults = false;
     }
 
     public void cancel() {}
@@ -331,7 +346,7 @@ class BrowserDialog {
   }
 
   private void setEntityDescription(final SynClient.Entity entity, final String details) {
-    infoPane.setText(String.format("<html><h1>%s</h1><h3>%s</h3><br>%s</html>", entity.getName(), entity.getId(), details));
+    infoPane.setText(String.format("<html><h1>%s</h1><h3>%s</h3><hr>%s</html>", entity.getName(), entity.getId(), details));
   }
 
   class GetDescription extends AbstractTask {
@@ -377,16 +392,33 @@ class BrowserDialog {
   }
 
   class ShowSearchResults extends AbstractTask {
+    final String query;
     final ResultTask<List<SynClient.Entity>> searchTask;
-    public ShowSearchResults(final ResultTask<List<SynClient.Entity>> searchTask) {
+    public ShowSearchResults(final String query, final ResultTask<List<SynClient.Entity>> searchTask) {
+      this.query = query;
       this.searchTask = searchTask;
     }
 
     public void run(TaskMonitor monitor) throws Exception {
       final List<SynClient.Entity> results = searchTask.get();
-      for (final SynClient.Entity entity : results) {
-        System.out.println(entity);
+      DefaultMutableTreeNode root = null;
+      if (results.size() == 0) {
+        root = new DefaultMutableTreeNode(String.format("No results for '%s'", query));
+      } else {
+        root = new DefaultMutableTreeNode(String.format("Results for '%s'", query));
+        for (final SynClient.Entity entity : results) {
+          final SynClient.EntityType type = entity.getType();
+          final DefaultMutableTreeNode node = new DefaultMutableTreeNode(entity);
+          root.add(node);
+          if (SynClient.EntityType.PROJECT.equals(type) ||
+              SynClient.EntityType.FOLDER.equals(type)) {
+            final ResultTask<List<SynClient.Entity>> childrenTask = client.newChildrenTask(entity.getId());
+            super.insertTasksAfterCurrentTask(childrenTask, new AddChildren(childrenTask, node, entity.getId()));
+          }
+        }
       }
+      model.setRoot(root);
+      showingSearchResults = true;
     }
 
     public void cancel() {}

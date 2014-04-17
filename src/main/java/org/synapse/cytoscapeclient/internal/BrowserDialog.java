@@ -157,9 +157,9 @@ class BrowserDialog {
 
     final JPanel innerSearchPanel = new JPanel(new GridBagLayout());
     innerSearchPanel.setBorder(new SearchPanelBorder());
-    innerSearchPanel.add(searchLabel, e.insets(4, 6, 4, 0));
-    innerSearchPanel.add(searchField, e.right().expandH().insets(4, 6, 4, 0));
-    innerSearchPanel.add(cancelButton, e.right().noExpand().insets(4, 2, 4, 6));
+    innerSearchPanel.add(searchLabel, e.insets(6, 8, 6, 0));
+    innerSearchPanel.add(searchField, e.right().expandH().insets(6, 8, 6, 0));
+    innerSearchPanel.add(cancelButton, e.right().noExpand().insets(6, 2, 6, 8));
 
     final JComboBox entityTypeCombo = new JComboBox(SynClient.EntityType.values());
     entityTypeCombo.setEnabled(false);
@@ -426,8 +426,8 @@ class BrowserDialog {
 }
 
 class SearchPanelBorder extends AbstractBorder {
-  final static float ARC = 6.0f;
-  final static Color BORDER_COLOR = new Color(0x606060);
+  final static float ARC = 25.0f;
+  final static Color BORDER_COLOR = new Color(0x909090);
   final static Color BKGND_COLOR = Color.WHITE;
   final static Stroke BORDER_STROKE = new BasicStroke(1.0f);
 

@@ -438,6 +438,7 @@ public class SynClient {
         final ObjectNode jquery = jsonNodeFactory.objectNode();
         jquery.set("queryTerm",    jsonNodeFactory.arrayNode().add(queryTerm));
         jquery.set("returnFields", jsonNodeFactory.arrayNode().add("name").add("id").add("node_type_r"));
+        jquery.put("size",         100);
         if (entityType != null) {
           final ObjectNode jtype = jsonNodeFactory.objectNode();
           jtype.put("key",  "node_type");

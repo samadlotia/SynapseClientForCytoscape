@@ -12,6 +12,7 @@ import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridBagLayout;
+import java.awt.Paint;
 import java.awt.BasicStroke;
 import java.awt.Stroke;
 import java.awt.RenderingHints;
@@ -260,8 +261,8 @@ class BrowserDialog {
         infoPane.setText("");
       } else {
         setEntityDescription(entity);
-        final ResultTask<String> descriptionIdTask = client.newDescriptionIdTask(entity.getId());
-        asyncTaskMgr.execute(new TaskIterator(descriptionIdTask, new GetDescription(entity, descriptionIdTask)));
+        final ResultTask<String> descriptionTask = client.newDescriptionMarkdownTask(entity.getId());
+        asyncTaskMgr.execute(new TaskIterator(descriptionTask, new ShowDescription(entity, descriptionTask)));
       }
 
       boolean enableNetworkBtn = false;
@@ -317,6 +318,7 @@ class BrowserDialog {
     final ResultTask<List<SynClient.Entity>> task;
     final DefaultMutableTreeNode parentNode;
     final String parentId;
+    volatile boolean cancelled = false;
 
     public AddChildren(final ResultTask<List<SynClient.Entity>> task, final DefaultMutableTreeNode parentNode, final String parentId) {
       this.task = task;
@@ -327,6 +329,10 @@ class BrowserDialog {
     public void run(final TaskMonitor monitor) {
       final List<SynClient.Entity> children = task.get();
       for (final SynClient.Entity child : children) {
+        if (cancelled) {
+          return;
+        }
+
         final DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(child);
         parentNode.add(childNode);
 
@@ -335,10 +341,15 @@ class BrowserDialog {
           super.insertTasksAfterCurrentTask(childrenTask, new AddChildren(childrenTask, childNode, child.getId()));
         }
       }
-      tree.expandPath(new TreePath(parentNode.getPath()));
+      final int level = parentNode.getLevel();
+      if (level <= 3) {
+        tree.expandPath(new TreePath(parentNode.getPath()));
+      }
     }
 
-    public void cancel() {}
+    public void cancel() {
+      cancelled = true;
+    }
   }
 
   private void setEntityDescription(final SynClient.Entity entity) {
@@ -347,28 +358,6 @@ class BrowserDialog {
 
   private void setEntityDescription(final SynClient.Entity entity, final String details) {
     infoPane.setText(String.format("<html><h1>%s</h1><h3>%s</h3><hr>%s</html>", entity.getName(), entity.getId(), details));
-  }
-
-  class GetDescription extends AbstractTask {
-    final SynClient.Entity entity;
-    final ResultTask<String> descriptionIdTask;
-
-    public GetDescription(final SynClient.Entity entity, final ResultTask<String> descriptionIdTask) {
-      this.entity = entity;
-      this.descriptionIdTask = descriptionIdTask;
-    }
-
-    public void run(TaskMonitor monitor) {
-      if (getSelectedEntity() != entity)
-        return;
-      final String descriptionId = descriptionIdTask.get();
-      if (descriptionId == null)
-        return;
-      final ResultTask<String> descriptionTask = client.newDescriptionMarkdownTask(entity.getId(), descriptionId);
-      super.insertTasksAfterCurrentTask(descriptionTask, new ShowDescription(entity, descriptionTask));
-    }
-
-    public void cancel() {}
   }
 
   class ShowDescription extends AbstractTask {
@@ -384,8 +373,10 @@ class BrowserDialog {
       if (getSelectedEntity() != entity)
         return;
       final String descriptionMd = descriptionTask.get();
-      final String descriptionHtml = mdProcessor.process(descriptionMd);
-      setEntityDescription(entity, descriptionHtml);
+      if (descriptionMd != null) {
+        final String descriptionHtml = mdProcessor.process(descriptionMd);
+        setEntityDescription(entity, descriptionHtml);
+      }
     }
 
     public void cancel() {}
@@ -436,7 +427,7 @@ class SearchPanelBorder extends AbstractBorder {
     final Graphics2D g2d = (Graphics2D) g;
 
     final boolean aa = RenderingHints.VALUE_ANTIALIAS_ON.equals(g2d.getRenderingHint(RenderingHints.KEY_ANTIALIASING));
-    final Color oldColor = g2d.getColor();
+    final Paint oldPaint = g2d.getPaint();
     final Stroke oldStroke = g2d.getStroke();
 
     borderShape.setRoundRect((float) x, (float) y, (float) (w - 1), (float) (h - 1), ARC, ARC);
@@ -449,7 +440,7 @@ class SearchPanelBorder extends AbstractBorder {
     g2d.setStroke(BORDER_STROKE);
     g2d.draw(borderShape);
 
-    g2d.setColor(oldColor);
+    g2d.setPaint(oldPaint);
     g2d.setStroke(oldStroke);
     g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa ? RenderingHints.VALUE_ANTIALIAS_ON : RenderingHints.VALUE_ANTIALIAS_OFF);
   }

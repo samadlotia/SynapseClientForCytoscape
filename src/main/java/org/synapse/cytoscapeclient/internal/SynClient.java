@@ -23,6 +23,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.protocol.HttpContext;
 
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
@@ -181,37 +182,37 @@ public class SynClient {
   }
 
 
-  private HttpPost newPostJson(final String url, final TreeNode jobj) throws UnsupportedEncodingException, IOException {
-    final ByteArrayOutputStream output = new ByteArrayOutputStream();
-    final ObjectMapper mapper = new ObjectMapper();
-    final JsonFactory jsonFactory = mapper.getFactory();
-    final JsonGenerator generator = jsonFactory.createGenerator(output, JsonEncoding.UTF8);
-    generator.writeTree(jobj);
-    output.flush();
-    output.close();
-    final ByteArrayInputStream input = new ByteArrayInputStream(output.toByteArray());
-    final HttpPost post = new HttpPost(url);
-    post.setEntity(new InputStreamEntity(input, ContentType.APPLICATION_JSON));
-    return post;
-  }
 
   abstract class ReqTask<T> extends ResultTask<T> {
     protected volatile boolean cancelled = false;
     volatile HttpUriRequest req = null;
     volatile CloseableHttpResponse resp = null;
 
-    protected ReqTask<T> exec(final HttpUriRequest req) throws Exception {
-      this.req = req;
-      closeResponse();
+    protected ReqTask<T> get(final String ... pieces) throws ClientProtocolException, IOException {
+      this.req = new HttpGet(join(pieces));
+      return exec();
+    }
+
+    protected ReqTask<T> postJson(final String url, final TreeNode jobj) throws UnsupportedEncodingException, ClientProtocolException, IOException {
+      final ByteArrayOutputStream output = new ByteArrayOutputStream();
+      final ObjectMapper mapper = new ObjectMapper();
+      final JsonFactory jsonFactory = mapper.getFactory();
+      final JsonGenerator generator = jsonFactory.createGenerator(output, JsonEncoding.UTF8);
+      generator.writeTree(jobj);
+      output.flush();
+      output.close();
+      final ByteArrayInputStream input = new ByteArrayInputStream(output.toByteArray());
+      final HttpPost post = new HttpPost(url);
+      post.setEntity(new InputStreamEntity(input, ContentType.APPLICATION_JSON));
+      this.req = post;
+      return exec();
+    }
+
+    private ReqTask<T> exec() throws IOException, ClientProtocolException {
       try {
         this.resp = client.execute(req);
-        final int statusCode = resp.getStatusLine().getStatusCode();
-        if (!(200 <= statusCode && statusCode < 300)) {
-          closeResponse();
-          throw new SynClientException("Request failed: " + resp.getStatusLine());
-        }
-      } catch (Exception e) {
-        closeResponse();
+      } catch (IOException e) {
+        end(); // clean up response obj
         if (!cancelled) { // ignore exceptions thrown if cancelled
           throw e;
         }
@@ -221,28 +222,61 @@ public class SynClient {
       return this;
     }
 
-    protected JsonNode toJson() throws SynClientException {
+    protected ReqTask<T> ensure2xx() throws SynClientException {
+      if (resp == null)
+        return this;
+      final int statusCode = resp.getStatusLine().getStatusCode();
+      if (!(200 <= statusCode && statusCode < 300)) {
+        final String reason = resp.getStatusLine().getReasonPhrase();
+        end();
+        throw new SynClientException("Request failed: " + reason);
+      }
+      return this;
+    }
+
+    protected JsonNode json() throws IOException {
       if (resp == null)
         return null;
       final ObjectMapper mapper = new ObjectMapper();
       try {
         return mapper.readValue(resp.getEntity().getContent(), JsonNode.class);
-      } catch (IOException e) {
-        throw new SynClientException("Unable to read response", e);
       } finally {
-        closeResponse();
+        end();
+      }
+    }
+
+    protected String string() throws IOException {
+      if (resp == null)
+        return null;
+      final HttpEntity entity = resp.getEntity();
+      final String contentType = entity.getContentType() == null ? null : entity.getContentType().getValue();
+      final String charset = entity.getContentEncoding() == null ? null : entity.getContentEncoding().getValue();
+      InputStream input = entity.getContent();
+      try {
+        if (contentType != null && contentType.equals("application/x-gzip")) {
+          input = new GZIPInputStream(input);
+        }
+        final ByteArrayOutputStream output = new ByteArrayOutputStream();
+        final byte[] buffer = new byte[1024];
+        while (!cancelled) {
+          final int len = input.read(buffer);
+          if (len < 0)
+            break;
+          output.write(buffer, 0, len);
+        }
+        return new String(output.toByteArray(), Charset.forName(charset == null ? "UTF-8" : charset));
+      } finally {
+        try { input.close(); } catch (IOException e) {}
+        end();
       }
     }
 
     static final int BLOCK_SIZE = 256 * 1024; /* 256 kb per block */
 
-    protected void toOutputStream(final OutputStream output, final TaskMonitor monitor) throws IOException {
+    protected void write(final OutputStream output, final TaskMonitor monitor) throws IOException {
       if (resp == null)
         return;
-      toOutputStream(resp.getEntity().getContent(), output, monitor);
-    }
-
-    protected void toOutputStream(final InputStream input, final OutputStream output, final TaskMonitor monitor) throws IOException {
+      final InputStream input = resp.getEntity().getContent();
       try {
         final long totalLen = resp.getEntity().getContentLength();
         final byte[] buffer = new byte[BLOCK_SIZE];
@@ -261,26 +295,28 @@ public class SynClient {
         input.close();
         output.close();
       } finally {
-        closeResponse();
+        end();
       }
     }
 
-    protected void closeResponse() {
-      if (resp == null)
-        return;
+    protected void end() {
       try {
         resp.close();
-      } catch (IOException e) {}
-      resp = null;
+      } catch (IOException e) {
+      } finally {
+        resp = null;
+      }
     }
 
     public void cancel() {
-      cancelled = true; // this MUST be set before calling HttpUriRequest.abort()
+      cancelled = true; // this MUST be set before calling HttpUriRequest.abort() to avoid unnecessary exceptions being thrown
       final HttpUriRequest req2 = this.req; // copy the reference to req to prevent it from becoming null while trying to abort it
       if (req2 != null) {
         req2.abort();
       }
-      closeResponse();
+      if (resp != null) {
+        end();
+      }
     }
   }
 
@@ -288,7 +324,7 @@ public class SynClient {
     return new ReqTask<UserProfile>() {
       protected UserProfile checkedRun(final TaskMonitor monitor) throws Exception {
         monitor.setTitle("Get Synapse user profile");
-        final JsonNode jroot = exec(new HttpGet(join(REPO_ENDPOINT, "/userProfile/"))).toJson();
+        final JsonNode jroot = get(REPO_ENDPOINT, "/userProfile/").ensure2xx().json();
         if (jroot == null)
           return null;
         return new UserProfile(jroot.get("ownerId").asText(), jroot.get("userName").asText());
@@ -315,7 +351,7 @@ public class SynClient {
 
         // get info about the entity
         monitor.setStatusMessage("Retrieving entity info");
-        final JsonNode jentityInfo = exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", entityId, "/bundle?mask=1"))).toJson();
+        final JsonNode jentityInfo = get(REPO_ENDPOINT, "/entity/", entityId, "/bundle?mask=1").ensure2xx().json();
         if (jentityInfo == null)
           return null;
 
@@ -330,14 +366,9 @@ public class SynClient {
 
         // request the file itself
         monitor.setStatusMessage("Downloading file");
-        exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", entityId, "/version/", version, "/file")));
-        if (resp == null)
-          return null;
-
-        // download the file to a temp
         final File file = newTempFile(filename);
         final FileOutputStream output = new FileOutputStream(file);
-        toOutputStream(output, monitor);
+        get(join(REPO_ENDPOINT, "/entity/", entityId, "/version/", version, "/file")).ensure2xx().write(output, monitor);
 
         return new SynFile(file, filename);
       }
@@ -349,7 +380,7 @@ public class SynClient {
       protected List<Entity> checkedRun(final TaskMonitor monitor) throws Exception {
         monitor.setTitle("Get projects created by " + userProfile.getUserName());
         final String query = join("SELECT id, name, concreteType FROM project WHERE project.createdByPrincipalId == ", userProfile.getOwnerId());
-        final JsonNode jroot = exec(new HttpGet(join(REPO_ENDPOINT, "/query?", query("query", query)))).toJson();
+        final JsonNode jroot = get(REPO_ENDPOINT, "/query?", query("query", query)).ensure2xx().json();
         if (jroot == null)
           return null;
         final JsonNode jprojects = jroot.get("results");
@@ -371,14 +402,21 @@ public class SynClient {
       protected List<Entity> checkedRun(final TaskMonitor monitor) throws Exception {
         monitor.setTitle("Get child entities of " + parentId);
         final List<Entity> children = new ArrayList<Entity>();
-        final JsonNode jchildren = exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", parentId, "/children"))).toJson();
+        get(REPO_ENDPOINT, "/entity/", parentId, "/children");
+        if (resp == null || resp.getStatusLine().getStatusCode() == 403) {
+          return null;
+        }
+        final JsonNode jchildren = ensure2xx().json();
         if (jchildren == null)
           return null;
         for (final JsonNode jchild : jchildren.get("idList")) {
           if (super.cancelled)
             return null;
           final String id = jchild.get("id").textValue();
-          final JsonNode jinfo = exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", id, "/bundle?mask=", Integer.toString(0x1 | 0x20)))).toJson();
+          get(REPO_ENDPOINT, "/entity/", id, "/bundle?mask=", Integer.toString(0x1 | 0x20));
+          if (resp == null || resp.getStatusLine().getStatusCode() == 403)
+            continue;
+          final JsonNode jinfo = ensure2xx().json();
           if (jinfo == null)
             return null;
           final JsonNode jentity = jinfo.get("entity");
@@ -392,38 +430,24 @@ public class SynClient {
     };
   }
 
-  public ResultTask<String> newDescriptionIdTask(final String entityId) {
+  public ResultTask<String> newDescriptionMarkdownTask(final String entityId) {
     return new ReqTask<String>() {
       protected String checkedRun(final TaskMonitor monitor) throws Exception {
-        monitor.setTitle("Get description info of " + entityId);
-        exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", entityId, "/wiki2")));
+        monitor.setTitle("Get description of " + entityId);
+        get(join(REPO_ENDPOINT, "/entity/", entityId, "/wiki2"));
         if (resp == null)
           return null;
         final int statusCode = resp.getStatusLine().getStatusCode();
         if (statusCode == 404) {
-          closeResponse();
+          end();
           return null;
+        } else {
+          ensure2xx();
         }
-        final JsonNode jinfo = toJson();
-        closeResponse();
-        return jinfo.get("id").textValue();
-      }
-    };
-  }
-
-  public ResultTask<String> newDescriptionMarkdownTask(final String entityId, final String descriptionId) {
-    return new ReqTask<String>() {
-      protected String checkedRun(final TaskMonitor monitor) throws Exception {
-        monitor.setTitle("Get description of " + entityId);
-        exec(new HttpGet(join(REPO_ENDPOINT, "/entity/", entityId, "/wiki2/", descriptionId, "/markdown")));
-        if (resp == null)
-          return null;
-        final Header encoding = resp.getEntity().getContentEncoding();
-        final InputStream input = new GZIPInputStream(resp.getEntity().getContent());
-        final ByteArrayOutputStream output = new ByteArrayOutputStream();
-        toOutputStream(input, output, monitor);
-
-        return new String(output.toByteArray(), Charset.forName(encoding == null ? "UTF-8" : encoding.getValue()));
+        final JsonNode jinfo = json();
+        final String descriptionId = jinfo.get("id").textValue();
+        final String description = get(REPO_ENDPOINT, "/entity/", entityId, "/wiki2/", descriptionId, "/markdown").ensure2xx().string();
+        return description;
       }
     };
   }
@@ -432,6 +456,7 @@ public class SynClient {
     return new ReqTask<List<Entity>>() {
       protected List<Entity> checkedRun(final TaskMonitor monitor) throws Exception {
         monitor.setTitle("Search for " + queryTerm);
+        // Build the jquery object, which contains the query elements
         final ObjectMapper mapper = new ObjectMapper();
         final JsonNodeFactory jsonNodeFactory = mapper.getNodeFactory();
         // Jackson doesn't support proper chaining when adding fields with JsonNodes as values :(
@@ -445,7 +470,8 @@ public class SynClient {
           jtype.put("value", entityType.getAlias());
           jquery.set("booleanQuery", jsonNodeFactory.arrayNode().add(jtype));
         }
-        final JsonNode jresults = exec(newPostJson(join(REPO_ENDPOINT, "/search"), jquery)).toJson();
+
+        final JsonNode jresults = postJson(join(REPO_ENDPOINT, "/search"), jquery).ensure2xx().json();
 
         final List<Entity> entities = new ArrayList<Entity>();
         for (final JsonNode jhit : jresults.get("hits")) {

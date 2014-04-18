@@ -212,7 +212,9 @@ public class SynClient {
       try {
         this.resp = client.execute(req);
       } catch (IOException e) {
-        end(); // clean up response obj
+        if (resp != null) {
+          end(); // clean up response obj
+        }
         if (!cancelled) { // ignore exceptions thrown if cancelled
           throw e;
         }

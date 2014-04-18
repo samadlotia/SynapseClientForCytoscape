@@ -14,7 +14,7 @@ class AsyncTaskMgr {
 
   public AsyncTaskMgr(final BrowserDialog dialog) {
     this.dialog = dialog;
-    this.service = Executors.newSingleThreadExecutor();
+    this.service = Executors.newFixedThreadPool(4);
   }
 
   public void execute(final TaskIterator iterator) {

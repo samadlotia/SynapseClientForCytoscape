@@ -88,7 +88,7 @@ class BrowserDialog {
     this.taskMgr = taskMgr;
     this.importerMgr = importerMgr;
 
-    dialog = new JDialog(parent, "Browse Synapse", false);
+    dialog = new JDialog(parent, "Synapse", false);
 
     model = new DefaultTreeModel(new DefaultMutableTreeNode());
 
@@ -185,13 +185,13 @@ class BrowserDialog {
     searchPanel.add(onlyBtn, e.noInsets().right().noExpand());
     searchPanel.add(entityTypeCombo, e.right());
 
+    final JPanel primaryPanel = new JPanel(new GridBagLayout());
+    primaryPanel.add(searchPanel, e.reset().expandH().insets(3, 5, 7, 0));
+    primaryPanel.add(new JScrollPane(tree), e.down().noInsets().expandHV());
+
     final JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
     buttonsPanel.add(importNetworkBtn);
     buttonsPanel.add(importTableBtn);
-
-    final JPanel primaryPanel = new JPanel(new GridBagLayout());
-    primaryPanel.add(searchPanel, e.reset().expandH().insets(3, 5, 2, 0));
-    primaryPanel.add(new JScrollPane(tree), e.down().noInsets().expandHV());
 
     final JPanel secondaryPanel = new JPanel(new GridBagLayout());
     secondaryPanel.add(new JScrollPane(infoPane), e.reset().expandHV());
@@ -200,7 +200,7 @@ class BrowserDialog {
     dialog.setLayout(new GridBagLayout());
     final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, primaryPanel, secondaryPanel);
     splitPane.setResizeWeight(0.85);
-    dialog.add(splitPane, e.down().expandHV().noInsets());
+    dialog.add(splitPane, e.reset().expandHV().noInsets());
     dialog.add(loadingLabel, e.expandH().insets(3, 4, 5, 0).down());
 
     dialog.pack();

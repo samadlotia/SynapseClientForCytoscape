@@ -304,14 +304,23 @@ class BrowserDialog {
           final DefaultMutableTreeNode projectNode = new DefaultMutableTreeNode(project);
           root.add(projectNode);
           final ResultTask<List<SynClient.Entity>> childrenTask = client.newChildrenTask(project.getId());
-          super.insertTasksAfterCurrentTask(childrenTask, new AddChildren(childrenTask, projectNode, project.getId()));
+          //super.insertTasksAfterCurrentTask(childrenTask, new AddChildren(childrenTask, projectNode, project.getId()));
+          asyncTaskMgr.execute(new TaskIterator(childrenTask, new AddChildren(childrenTask, projectNode, project.getId())));
         }
       }
-      model.setRoot(root);
+      setRootLater(root);
       showingSearchResults = false;
     }
 
     public void cancel() {}
+  }
+
+  void setRootLater(final DefaultMutableTreeNode root) {
+    SwingUtilities.invokeLater(new Runnable() {
+      public void run() {
+        model.setRoot(root);
+      }
+    });
   }
 
   class AddChildren extends AbstractTask {
@@ -328,22 +337,33 @@ class BrowserDialog {
 
     public void run(final TaskMonitor monitor) {
       final List<SynClient.Entity> children = task.get();
+      if (children == null)
+        return;
       for (final SynClient.Entity child : children) {
         if (cancelled) {
           return;
         }
 
         final DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(child);
-        parentNode.add(childNode);
+        SwingUtilities.invokeLater(new Runnable() {
+          public void run() {
+            parentNode.add(childNode);
+          }
+        });
 
         if (SynClient.EntityType.FOLDER.equals(child.getType())) {
           final ResultTask<List<SynClient.Entity>> childrenTask = client.newChildrenTask(child.getId());
-          super.insertTasksAfterCurrentTask(childrenTask, new AddChildren(childrenTask, childNode, child.getId()));
+          //super.insertTasksAfterCurrentTask(childrenTask, new AddChildren(childrenTask, childNode, child.getId()));
+          asyncTaskMgr.execute(new TaskIterator(childrenTask, new AddChildren(childrenTask, childNode, child.getId())));
         }
       }
       final int level = parentNode.getLevel();
       if (level <= 3) {
-        tree.expandPath(new TreePath(parentNode.getPath()));
+        SwingUtilities.invokeLater(new Runnable() {
+          public void run() {
+            tree.expandPath(new TreePath(parentNode.getPath()));
+          }
+        });
       }
     }
 
@@ -357,7 +377,11 @@ class BrowserDialog {
   }
 
   private void setEntityDescription(final SynClient.Entity entity, final String details) {
-    infoPane.setText(String.format("<html><h1>%s</h1><h3>%s</h3><hr>%s</html>", entity.getName(), entity.getId(), details));
+    SwingUtilities.invokeLater(new Runnable() {
+      public void run() {
+        infoPane.setText(String.format("<html><h1>%s</h1><h3>%s</h3><hr>%s</html>", entity.getName(), entity.getId(), details));
+      }
+    });
   }
 
   class ShowDescription extends AbstractTask {
@@ -404,11 +428,12 @@ class BrowserDialog {
           if (SynClient.EntityType.PROJECT.equals(type) ||
               SynClient.EntityType.FOLDER.equals(type)) {
             final ResultTask<List<SynClient.Entity>> childrenTask = client.newChildrenTask(entity.getId());
-            super.insertTasksAfterCurrentTask(childrenTask, new AddChildren(childrenTask, node, entity.getId()));
+            //super.insertTasksAfterCurrentTask(childrenTask, new AddChildren(childrenTask, node, entity.getId()));
+            asyncTaskMgr.execute(new TaskIterator(childrenTask, new AddChildren(childrenTask, node, entity.getId())));
           }
         }
       }
-      model.setRoot(root);
+      setRootLater(root);
       showingSearchResults = true;
     }
 

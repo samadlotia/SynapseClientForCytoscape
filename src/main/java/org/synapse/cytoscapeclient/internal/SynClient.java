@@ -15,6 +15,8 @@ import java.net.URLEncoder;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.http.Header;
 
@@ -24,16 +26,21 @@ import org.apache.http.HttpResponse;
 import org.apache.http.protocol.HttpContext;
 
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.ContentType;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
+import org.apache.http.protocol.HttpContext;
+import org.apache.http.client.protocol.HttpClientContext;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -173,20 +180,35 @@ public class SynClient {
   static final String REPO_ENDPOINT = "https://repo-prod.prod.sagebase.org/repo/v1";
 
   final CloseableHttpClient client;
+  final PoolingHttpClientConnectionManager connMgr;
 
   public SynClient(final HttpRequestInterceptor auth) {
+    /*
+    final RequestConfig conf =
+      RequestConfig.custom()
+      .setConnectTimeout(10*1000)
+      .setStaleConnectionCheckEnabled(true)
+      .build();
+    */
+    connMgr = new PoolingHttpClientConnectionManager();
+    connMgr.setDefaultMaxPerRoute(AsyncTaskMgr.N_THREADS);
     client = 
       HttpClientBuilder.create()
         .addInterceptorLast(auth)
+        .setConnectionManager(connMgr)
+        //.setDefaultRequestConfig(conf)
         .build();
   }
 
-
-
   abstract class ReqTask<T> extends ResultTask<T> {
+    protected final HttpContext context;
     protected volatile boolean cancelled = false;
-    volatile HttpUriRequest req = null;
+    volatile HttpRequestBase req = null;
     volatile CloseableHttpResponse resp = null;
+
+    public ReqTask() {
+      this.context = HttpClientContext.create();
+    }
 
     protected ReqTask<T> get(final String ... pieces) throws ClientProtocolException, IOException {
       this.req = new HttpGet(join(pieces));
@@ -210,16 +232,16 @@ public class SynClient {
 
     private ReqTask<T> exec() throws IOException, ClientProtocolException {
       try {
-        this.resp = client.execute(req);
+        System.out.println(String.format("Req[%x] exec(%s)", this.hashCode(), req));
+        this.resp = client.execute(req, context);
       } catch (IOException e) {
         if (resp != null) {
-          end(); // clean up response obj
+          end(); // clean up req & response obj
         }
         if (!cancelled) { // ignore exceptions thrown if cancelled
+          System.out.println("Req failed: " + req);
           throw e;
         }
-      } finally {
-        this.req = null;
       }
       return this;
     }
@@ -231,7 +253,7 @@ public class SynClient {
       if (!(200 <= statusCode && statusCode < 300)) {
         final String reason = resp.getStatusLine().getReasonPhrase();
         end();
-        throw new SynClientException("Request failed: " + reason);
+        throw new SynClientException(statusCode + " " + reason);
       }
       return this;
     }
@@ -302,11 +324,15 @@ public class SynClient {
     }
 
     protected void end() {
+      System.out.println(String.format("Req[%x] end()", this.hashCode(), req));
       try {
         resp.close();
+        req.releaseConnection();
       } catch (IOException e) {
       } finally {
+        req = null;
         resp = null;
+        connMgr.closeExpiredConnections();
       }
     }
 
@@ -404,8 +430,26 @@ public class SynClient {
       protected List<Entity> checkedRun(final TaskMonitor monitor) throws Exception {
         monitor.setTitle("Get child entities of " + parentId);
         final List<Entity> children = new ArrayList<Entity>();
+        final String query = String.format("SELECT name, concreteType FROM entity WHERE parentId==\"%s\"", parentId);
+        get(REPO_ENDPOINT, "/query?", query("query", query));
+        if (resp == null || resp.getStatusLine().getStatusCode() == 403 || resp.getStatusLine().getStatusCode() == 401) {
+          end();
+          return null;
+        }
+        final JsonNode jroot = ensure2xx().json();
+        if (jroot == null)
+          return null;
+        for (final JsonNode jchild : jroot.get("results")) {
+          final String id = jchild.get("entity.id").textValue();
+          final String name = jchild.get("entity.name").textValue();
+          final String type = jchild.get("entity.concreteType").get(0).textValue();
+          final Entity child = new Entity(id, name, type);
+          children.add(child);
+        }
+
+        /*
         get(REPO_ENDPOINT, "/entity/", parentId, "/children");
-        if (resp == null || resp.getStatusLine().getStatusCode() == 403) {
+        if (resp == null || resp.getStatusLine().getStatusCode() == 403 || resp.getStatusLine().getStatusCode() == 401) {
           return null;
         }
         final JsonNode jchildren = ensure2xx().json();
@@ -416,8 +460,10 @@ public class SynClient {
             return null;
           final String id = jchild.get("id").textValue();
           get(REPO_ENDPOINT, "/entity/", id, "/bundle?mask=", Integer.toString(0x1 | 0x20));
-          if (resp == null || resp.getStatusLine().getStatusCode() == 403)
+          if (resp == null || resp.getStatusLine().getStatusCode() == 403 || resp.getStatusLine().getStatusCode() == 401) {
+            end();
             continue;
+          }
           final JsonNode jinfo = ensure2xx().json();
           if (jinfo == null)
             return null;
@@ -427,6 +473,7 @@ public class SynClient {
           final Entity child = new Entity(id, name, type);
           children.add(child);
         }
+        */
         return children;
       }
     };

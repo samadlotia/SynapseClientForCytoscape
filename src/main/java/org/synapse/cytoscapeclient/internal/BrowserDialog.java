@@ -71,6 +71,7 @@ class BrowserDialog {
   final JTree tree;
   final JButton importNetworkBtn;
   final JButton importTableBtn;
+  final JButton saveBtn;
   final Markdown4jProcessor mdProcessor = new Markdown4jProcessor();
   final JLabel loadingLabel;
   final AsyncTaskMgr asyncTaskMgr;
@@ -120,6 +121,15 @@ class BrowserDialog {
       }
     });
     importTableBtn.setEnabled(false);
+
+    saveBtn = new JButton("Save As...");
+    saveBtn.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        final SynClient.Entity entity = getSelectedEntity();
+        taskMgr.execute(new TaskIterator(new SaveAsTask(client, entity)));
+      }
+    });
+    saveBtn.setEnabled(false);
 
     tree.addTreeSelectionListener(new UpdateDescriptionAndImportButtons());
 
@@ -192,6 +202,7 @@ class BrowserDialog {
     final JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
     buttonsPanel.add(importNetworkBtn);
     buttonsPanel.add(importTableBtn);
+    buttonsPanel.add(saveBtn);
 
     final JPanel secondaryPanel = new JPanel(new GridBagLayout());
     secondaryPanel.add(new JScrollPane(infoPane), e.reset().expandHV());
@@ -267,7 +278,9 @@ class BrowserDialog {
 
       boolean enableNetworkBtn = false;
       boolean enableTableBtn = false;
+      boolean enableSaveBtn = false;
       if (entity != null && SynClient.EntityType.FILE.equals(entity.getType())) {
+        enableSaveBtn = true;
         final String extension = getExtension(entity.getName());
         if (extension == null) {
           enableNetworkBtn = enableTableBtn = true;
@@ -278,6 +291,7 @@ class BrowserDialog {
       }
       importNetworkBtn.setEnabled(enableNetworkBtn);
       importTableBtn.setEnabled(enableTableBtn);
+      saveBtn.setEnabled(enableSaveBtn);
     }
   }
 

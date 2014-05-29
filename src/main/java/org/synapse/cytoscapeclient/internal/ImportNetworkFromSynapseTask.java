@@ -62,24 +62,26 @@ class InternalImport extends AbstractTask {
     }
 
     monitor.setTitle("Import network from Synapse");
-    final ResultTask<SynClient.SynFile> fileTask = client.newFileTask(entityId);
-    super.insertTasksAfterCurrentTask(fileTask, new AbstractTask() {
+    final ResultTask<SynClient.SynFile> fileInfoTask = client.newFileInfoTask(entityId);
+    super.insertTasksAfterCurrentTask(fileInfoTask, new AbstractTask() {
       public void run(TaskMonitor monitor) {
-        final TaskIterator iterator = loadNetworkFileTF.createTaskIterator(fileTask.get().getFile(), new SetupNetwork(fileTask));
-        super.insertTasksAfterCurrentTask(iterator);
+        final ResultTask<File> downloadTask = client.newDownloadFileTask(fileInfoTask.get());
+        super.insertTasksAfterCurrentTask(downloadTask, new AbstractTask() {
+          public void run(TaskMonitor monitor) {
+            final TaskIterator iterator = loadNetworkFileTF.createTaskIterator(downloadTask.get(), new SetupNetwork(fileInfoTask.get()));
+            super.insertTasksAfterCurrentTask(iterator);
+          }
+        });
       }
-      public void cancel() {}
     });
   }
-
-  public void cancel() {}
 }
 
 class SetupNetwork implements TaskObserver {
-  final ResultTask<SynClient.SynFile> fileTask;
+  final SynClient.SynFile fileInfo;
 
-  public SetupNetwork(final ResultTask<SynClient.SynFile> fileTask) {
-    this.fileTask = fileTask;
+  public SetupNetwork(final SynClient.SynFile fileInfo) {
+    this.fileInfo = fileInfo;
   }
 
   public void taskFinished(final ObservableTask task) {
@@ -87,7 +89,7 @@ class SetupNetwork implements TaskObserver {
     if (views.size() != 1) {
       return;
     }
-    final String netName = fileTask.get().getName();
+    final String netName = fileInfo.getFilename();
     final CyNetwork net = views.get(0).getModel();
     net.getRow(net).set(CyNetwork.NAME, netName);
     if (net instanceof CySubNetwork) {

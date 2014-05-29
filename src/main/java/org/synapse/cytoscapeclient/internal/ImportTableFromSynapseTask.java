@@ -53,19 +53,17 @@ class InternalTask extends AbstractTask {
     }
 
     monitor.setTitle("Import table from Synapse");
-    monitor.setStatusMessage("Getting entity information");
-
-    final ResultTask<SynClient.SynFile> fileTask = client.newFileTask(entityId);
-    super.insertTasksAfterCurrentTask(fileTask, new AbstractTask() {
+    final ResultTask<SynClient.SynFile> fileInfoTask = client.newFileInfoTask(entityId);
+    super.insertTasksAfterCurrentTask(fileInfoTask, new AbstractTask() {
       public void run(TaskMonitor monitor) {
-        final TaskIterator iterator = loadTableFileTF.createTaskIterator(fileTask.get().getFile());
-        super.insertTasksAfterCurrentTask(iterator);
+        final ResultTask<File> downloadTask = client.newDownloadFileTask(fileInfoTask.get());
+        super.insertTasksAfterCurrentTask(downloadTask, new AbstractTask() {
+          public void run(TaskMonitor monitor) {
+            final TaskIterator iterator = loadTableFileTF.createTaskIterator(downloadTask.get());
+            super.insertTasksAfterCurrentTask(iterator);
+          }
+        });
       }
-
-      public void cancel() {}
     });
-
   }
-
-  public void cancel() {}
 }

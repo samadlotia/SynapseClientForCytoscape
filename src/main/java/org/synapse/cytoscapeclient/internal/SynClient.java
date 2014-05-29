@@ -74,20 +74,26 @@ public class SynClient {
   }
 
   public static class SynFile {
-    final File file;
-    final String name;
+    final String filename;
+    final String entityId;
+    final String version;
 
-    public SynFile(File file, String name) {
-      this.file = file;
-      this.name = name;
+    public SynFile(String filename, String entityId, String version) {
+      this.filename = filename;
+      this.entityId = entityId;
+      this.version = version;
     }
 
-    public File getFile() {
-      return file;
+    public String getFilename() {
+      return filename;
     }
 
-    public String getName() {
-      return name;
+    public String getEntityId() {
+      return entityId;
+    }
+
+    public String getVersion() {
+      return version;
     }
   }
 
@@ -360,25 +366,13 @@ public class SynClient {
     };
   }
 
-  static File newTempFile(final String fullname) throws IOException {
-    final int exti = fullname.lastIndexOf('.');
-    if (exti < 0) {
-      return File.createTempFile(fullname, null);
-    } else {
-      final String name = fullname.substring(0, exti);
-      final String ext = fullname.substring(exti);
-      return File.createTempFile(name, ext);
-    }
-  }
-
-  public ResultTask<SynFile> newFileTask(final String entityId) {
+  public ResultTask<SynFile> newFileInfoTask(final String entityId) {
     return new ReqTask<SynFile>() {
       protected SynFile checkedRun(final TaskMonitor monitor) throws Exception {
-        monitor.setTitle("Download file " + entityId);
+        monitor.setTitle("Retrieving entity info: " + entityId);
         monitor.setProgress(-1);
 
         // get info about the entity
-        monitor.setStatusMessage("Retrieving entity info");
         final JsonNode jentityInfo = get(REPO_ENDPOINT, "/entity/", entityId, "/bundle?mask=1").ensure2xx().json();
         if (jentityInfo == null)
           return null;
@@ -391,14 +385,34 @@ public class SynClient {
         // get name and version
         final String filename = jentityInfo.get("entity").get("name").asText();
         final String version = jentityInfo.get("entity").get("versionLabel").asText();
+        return new SynFile(filename, entityId, version);
+      }
+    };
+  }
 
-        // request the file itself
-        monitor.setStatusMessage("Downloading file");
-        final File file = newTempFile(filename);
+  static File newTempFile(final String fullname) throws IOException {
+    final int exti = fullname.lastIndexOf('.');
+    if (exti < 0) {
+      return File.createTempFile(fullname, null);
+    } else {
+      final String name = fullname.substring(0, exti);
+      final String ext = fullname.substring(exti);
+      return File.createTempFile(name, ext);
+    }
+  }
+
+  public ResultTask<File> newDownloadFileTask(final SynFile synFile) {
+    return newDownloadFileTask(synFile, null);
+  }
+
+  public ResultTask<File> newDownloadFileTask(final SynFile synFile, final File destination) {
+    return new ReqTask<File>() {
+      protected File checkedRun(final TaskMonitor monitor) throws Exception {
+        monitor.setTitle("Downloading " + synFile.getFilename());
+        final File file = destination != null ? destination : newTempFile(synFile.getFilename());
         final FileOutputStream output = new FileOutputStream(file);
-        get(join(REPO_ENDPOINT, "/entity/", entityId, "/version/", version, "/file")).ensure2xx().write(output, monitor);
-
-        return new SynFile(file, filename);
+        get(join(REPO_ENDPOINT, "/entity/", synFile.getEntityId(), "/version/", synFile.getVersion(), "/file")).ensure2xx().write(output, monitor);
+        return file;
       }
     };
   }

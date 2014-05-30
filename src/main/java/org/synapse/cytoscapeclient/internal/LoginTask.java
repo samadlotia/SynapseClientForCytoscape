@@ -8,10 +8,10 @@ public class LoginTask extends AbstractTask {
   final SynClientMgr clientMgr;
   final AuthCacheMgr authCacheMgr;
 
-  @Tunable(description="User Email", gravity=1.0)
+  @Tunable(description="Username", gravity=1.0, tooltip="Enter your username here, located in the top-right corner of the Synapse website in parenthesis")
   public String userId;
 
-  @Tunable(description="API Key", gravity=2.0)
+  @Tunable(description="API Key", gravity=2.0, tooltip="The API Key can be found by clicking on the \"Settings\" icon on the top-right corner of the Synapse website")
   public String apiKey;
 
   public LoginTask(final SynClientMgr clientMgr, final AuthCacheMgr authCacheMgr) {

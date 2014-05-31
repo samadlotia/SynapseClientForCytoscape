@@ -35,12 +35,7 @@ public class BrowseTaskFactory extends AbstractTaskFactory {
   }
 
   public TaskIterator createTaskIterator() {
-    final TaskIterator iterator = new TaskIterator();
-    if (clientMgr.get() == null) {
-      iterator.append(new LoginTask(clientMgr, authCacheMgr));
-    }
-    iterator.append(new BrowseTask(cySwingApp, clientMgr, taskMgr, importerMgr, loadNetworkFileTF, loadTableFileTF));
-    return iterator;
+    return new TaskIterator(new BrowseTask(cySwingApp, clientMgr, authCacheMgr, taskMgr, importerMgr, loadNetworkFileTF, loadTableFileTF));
   }
 
   public boolean isReady() {

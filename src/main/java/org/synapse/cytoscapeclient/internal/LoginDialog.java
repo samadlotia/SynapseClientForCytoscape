@@ -16,6 +16,9 @@ import java.awt.Font;
 import java.awt.GridBagLayout;
 import java.awt.FlowLayout;
 
+import java.awt.event.ActionListener;
+import java.awt.event.ActionEvent;
+
 public class LoginDialog {
   final JDialog dialog;
   final JTextField userField;
@@ -36,25 +39,35 @@ public class LoginDialog {
     return area;
   }
 
+  private static JTextField newTextField() {
+    final JTextField field = new JTextField(40);
+    return field;
+  }
+
   public LoginDialog(final Frame parent) {
     dialog = new JDialog(parent, "Sign in to Synapse");
 
     final JLabel userLabel = new JLabel("Username: ");
-    userField = new JTextField();
+    userField = newTextField();
     userField.getDocument().addDocumentListener(new HideFailedOnChange());
     final JTextArea userHelp = newHelpArea("Your username is located in parenthesis at the top-right corner of the Synapse website next to your full name.");
 
     final JLabel apiKeyLabel = new JLabel("API Key: ");
-    apiKeyField = new JTextField();
+    apiKeyField = newTextField();
     apiKeyField.getDocument().addDocumentListener(new HideFailedOnChange());
     final JTextArea apiKeyHelp = newHelpArea("Your API key can be found by clicking the \"Settings\" icon at the top-right corner of the Synapse website.");
 
     failedLabel = new JLabel("Sign in failed. Please re-enter your username and API key.");
     failedLabel.setForeground(new Color(0xA82D2D));
-    //failedLabel.setVisible(false);
+    failedLabel.setVisible(false);
 
     okBtn = new JButton("Sign in");
     final JButton cancelBtn = new JButton("Cancel");
+    cancelBtn.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        close();
+      }
+    });
 
     final EasyGBC c = new EasyGBC();
     dialog.setLayout(new GridBagLayout());
@@ -78,14 +91,6 @@ public class LoginDialog {
     dialog.setVisible(true);
   }
 
-  public static void main(String[] args) {
-    javax.swing.SwingUtilities.invokeLater(new Runnable() {
-      public void run() {
-        new LoginDialog(null);
-      }
-    });
-  }
-
   class HideFailedOnChange implements DocumentListener {
     public void changedUpdate(DocumentEvent e) {
       hide();
@@ -103,5 +108,41 @@ public class LoginDialog {
       failedLabel.setVisible(false);
       dialog.pack();
     }
+  }
+
+  public void setFields(final String user, final String apiKey) {
+    userField.setText(user);
+    apiKeyField.setText(apiKey);
+  }
+
+  public String getUsername() {
+    return userField.getText();
+  }
+
+  public String getAPIKey() {
+    return apiKeyField.getText();
+  }
+
+  public void addOkListener(final ActionListener listener) {
+    okBtn.addActionListener(listener);
+  }
+
+  public void showFailed() {
+    failedLabel.setVisible(true);
+    dialog.pack();
+  }
+
+  public void close() {
+    dialog.dispose();
+  }
+
+  public void disableOkBtn() {
+    okBtn.setText("Signing in...");
+    okBtn.setEnabled(false);
+  }
+
+  public void reenableOkBtn() {
+    okBtn.setText("Sign in");
+    okBtn.setEnabled(true);
   }
 }

@@ -21,6 +21,50 @@ public class LoginTask extends AbstractTask {
     this.apiKey = authCacheMgr.getAPIKey();
   }
 
+  public void run(TaskMonitor monitor) {
+    super.insertTasksAfterCurrentTask(new InternalLoginTask(
+      clientMgr,
+      authCacheMgr,
+      userId,
+      apiKey
+      ));
+  }
+
+  public void cancel() {}
+
+  public static AbstractTask noTunables(
+      final SynClientMgr clientMgr,
+      final AuthCacheMgr authCacheMgr,
+      final String userId,
+      final String apiKey
+    ) {
+    return new InternalLoginTask(
+      clientMgr,
+      authCacheMgr,
+      userId,
+      apiKey
+      );
+  }
+}
+
+class InternalLoginTask extends AbstractTask {
+  final SynClientMgr clientMgr;
+  final AuthCacheMgr authCacheMgr;
+  final String userId;
+  final String apiKey;
+
+  public InternalLoginTask(
+      final SynClientMgr clientMgr,
+      final AuthCacheMgr authCacheMgr,
+      final String userId,
+      final String apiKey
+    ) {
+    this.clientMgr = clientMgr;
+    this.authCacheMgr = authCacheMgr;
+    this.userId = userId;
+    this.apiKey = apiKey;
+  }
+
   public void run(TaskMonitor monitor) throws Exception {
     clientMgr.set(null);
     if (userId.length() != 0 && apiKey.length() != 0) {
@@ -33,8 +77,6 @@ public class LoginTask extends AbstractTask {
       authCacheMgr.setUserIDAPIKey("", "");
     }
   }
-
-  public void cancel() {}
 }
 
 class AssignClientTask extends AbstractTask {

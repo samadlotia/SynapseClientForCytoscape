@@ -1,17 +1,16 @@
 package org.synapse.cytoscapeclient.internal;
 
-import org.cytoscape.task.read.LoadNetworkFileTaskFactory;
-
 import org.cytoscape.work.AbstractTaskFactory;
 import org.cytoscape.work.TaskIterator;
+import org.cytoscape.task.read.OpenSessionTaskFactory;
 
-public class ImportNetworkFromSynapseTaskFactory extends AbstractTaskFactory {
-  final LoadNetworkFileTaskFactory loadNetworkFileTF;
+public class OpenSessionFromSynapseTaskFactory extends AbstractTaskFactory {
+  final OpenSessionTaskFactory openSeshTF;
   final SynClientMgr clientMgr;
   final AuthCacheMgr authCacheMgr;
 
-  public ImportNetworkFromSynapseTaskFactory(final LoadNetworkFileTaskFactory loadNetworkFileTF, final SynClientMgr clientMgr, final AuthCacheMgr authCacheMgr) {
-    this.loadNetworkFileTF = loadNetworkFileTF;
+  public OpenSessionFromSynapseTaskFactory(final OpenSessionTaskFactory openSeshTF, final SynClientMgr clientMgr, final AuthCacheMgr authCacheMgr) {
+    this.openSeshTF = openSeshTF;
     this.clientMgr = clientMgr;
     this.authCacheMgr = authCacheMgr;
   }
@@ -21,7 +20,7 @@ public class ImportNetworkFromSynapseTaskFactory extends AbstractTaskFactory {
     if (clientMgr.get() == null) {
       iterator.append(new LoginTask(clientMgr, authCacheMgr));
     }
-    iterator.append(new ImportNetworkFromSynapseTask(loadNetworkFileTF, clientMgr));
+    iterator.append(new OpenSessionFromSynapseTask(openSeshTF, clientMgr));
     return iterator;
   }
 

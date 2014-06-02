@@ -7,6 +7,7 @@ import org.cytoscape.task.read.LoadTableFileTaskFactory;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.task.read.LoadNetworkFileTaskFactory;
 import org.cytoscape.task.read.LoadTableFileTaskFactory;
+import org.cytoscape.task.read.OpenSessionTaskFactory;
 
 public class BrowseTaskFactory extends AbstractTaskFactory {
   final CySwingApplication cySwingApp;
@@ -16,6 +17,7 @@ public class BrowseTaskFactory extends AbstractTaskFactory {
   final ImporterMgr importerMgr;
   final LoadNetworkFileTaskFactory loadNetworkFileTF;
   final LoadTableFileTaskFactory loadTableFileTF;
+  final OpenSessionTaskFactory openSeshTF;
 
   public BrowseTaskFactory(
         final CySwingApplication cySwingApp,
@@ -24,7 +26,8 @@ public class BrowseTaskFactory extends AbstractTaskFactory {
         final AuthCacheMgr authCacheMgr,
         final ImporterMgr importerMgr,
         final LoadNetworkFileTaskFactory loadNetworkFileTF,
-        final LoadTableFileTaskFactory loadTableFileTF) {
+        final LoadTableFileTaskFactory loadTableFileTF,
+        final OpenSessionTaskFactory openSeshTF) {
     this.cySwingApp = cySwingApp;
     this.clientMgr = clientMgr;
     this.taskMgr = taskMgr;
@@ -32,10 +35,11 @@ public class BrowseTaskFactory extends AbstractTaskFactory {
     this.importerMgr = importerMgr;
     this.loadNetworkFileTF = loadNetworkFileTF;
     this.loadTableFileTF = loadTableFileTF;
+    this.openSeshTF = openSeshTF;
   }
 
   public TaskIterator createTaskIterator() {
-    return new TaskIterator(new BrowseTask(cySwingApp, clientMgr, authCacheMgr, taskMgr, importerMgr, loadNetworkFileTF, loadTableFileTF));
+    return new TaskIterator(new BrowseTask(cySwingApp, clientMgr, authCacheMgr, taskMgr, importerMgr, loadNetworkFileTF, loadTableFileTF, openSeshTF));
   }
 
   public boolean isReady() {

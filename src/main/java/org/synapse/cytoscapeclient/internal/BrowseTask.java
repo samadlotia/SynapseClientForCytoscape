@@ -11,6 +11,7 @@ import org.cytoscape.work.FinishStatus;
 import org.cytoscape.application.swing.CySwingApplication;
 import org.cytoscape.task.read.LoadNetworkFileTaskFactory;
 import org.cytoscape.task.read.LoadTableFileTaskFactory;
+import org.cytoscape.task.read.OpenSessionTaskFactory;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -23,6 +24,7 @@ public class BrowseTask extends AbstractTask {
   final ImporterMgr importerMgr;
   final LoadNetworkFileTaskFactory loadNetworkFileTF;
   final LoadTableFileTaskFactory loadTableFileTF;
+  final OpenSessionTaskFactory openSeshTF;
 
   public BrowseTask(
         final CySwingApplication cySwingApp,
@@ -31,7 +33,8 @@ public class BrowseTask extends AbstractTask {
         final TaskManager taskMgr,
         final ImporterMgr importerMgr,
         final LoadNetworkFileTaskFactory loadNetworkFileTF,
-        final LoadTableFileTaskFactory loadTableFileTF) {
+        final LoadTableFileTaskFactory loadTableFileTF,
+        final OpenSessionTaskFactory openSeshTF) {
     this.cySwingApp = cySwingApp;
     this.clientMgr = clientMgr;
     this.authCacheMgr = authCacheMgr;
@@ -39,41 +42,14 @@ public class BrowseTask extends AbstractTask {
     this.importerMgr = importerMgr;
     this.loadNetworkFileTF = loadNetworkFileTF;
     this.loadTableFileTF = loadTableFileTF;
+    this.openSeshTF = openSeshTF;
   }
 
   public void run(final TaskMonitor monitor) {
     SwingUtilities.invokeLater(new Runnable() {
       public void run() {
         if (clientMgr.get() == null) {
-          final LoginDialog dialog = new LoginDialog(cySwingApp.getJFrame());
-          dialog.setFields(authCacheMgr.getUserID(), authCacheMgr.getAPIKey());
-          dialog.addOkListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-              dialog.disableOkBtn();
-              final AbstractTask loginTask = LoginTask.noTunables(
-                clientMgr,
-                authCacheMgr,
-                dialog.getUsername(),
-                dialog.getAPIKey());
-              taskMgr.execute(new TaskIterator(loginTask), new TaskObserver() {
-                public void taskFinished(ObservableTask task) {}
-
-                public void allFinished(final FinishStatus finishStatus) {
-                  SwingUtilities.invokeLater(new Runnable() {
-                    public void run() {
-                      if (finishStatus.getType().equals(FinishStatus.Type.SUCCEEDED)) {
-                        dialog.close();
-                        showBrowserDialog();
-                      } else {
-                        dialog.reenableOkBtn();
-                        dialog.showFailed();
-                      }
-                    }
-                  });
-                }
-              });
-            }
-          });
+          startLoginProcess();
         } else {
           showBrowserDialog();
         }
@@ -81,10 +57,46 @@ public class BrowseTask extends AbstractTask {
     });
   }
 
-  private void showBrowserDialog() {
-    new BrowserDialog(cySwingApp.getJFrame(), clientMgr, taskMgr, importerMgr, loadNetworkFileTF, loadTableFileTF);
+  private void startLoginProcess() {
+    final LoginDialog dialog = new LoginDialog(cySwingApp.getJFrame());
+    dialog.setFields(authCacheMgr.getUserID(), authCacheMgr.getAPIKey());
+    dialog.addOkListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        dialog.disableOkBtn();
+        final AbstractTask loginTask = LoginTask.noTunables(
+          clientMgr,
+          authCacheMgr,
+          dialog.getUsername(),
+          dialog.getAPIKey());
+        taskMgr.execute(new TaskIterator(loginTask), new LoginTaskObserver(dialog));
+      }
+    });
   }
 
-  public void cancel() {
+  private void showBrowserDialog() {
+    new BrowserDialog(cySwingApp.getJFrame(), clientMgr, taskMgr, importerMgr, loadNetworkFileTF, loadTableFileTF, openSeshTF);
+  }
+
+  class LoginTaskObserver implements TaskObserver {
+    final LoginDialog dialog;
+    public LoginTaskObserver(final LoginDialog dialog) {
+      this.dialog = dialog;
+    }
+
+    public void taskFinished(ObservableTask task) {}
+
+    public void allFinished(final FinishStatus finishStatus) {
+      SwingUtilities.invokeLater(new Runnable() {
+        public void run() {
+          if (finishStatus.getType().equals(FinishStatus.Type.SUCCEEDED)) {
+            dialog.close();
+            showBrowserDialog();
+          } else {
+            dialog.reenableOkBtn();
+            dialog.showFailed();
+          }
+        }
+      });
+    }
   }
 }

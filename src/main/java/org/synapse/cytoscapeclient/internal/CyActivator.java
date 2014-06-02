@@ -13,6 +13,7 @@ import org.cytoscape.work.swing.DialogTaskManager;
 import org.cytoscape.work.ServiceProperties;
 import org.cytoscape.task.read.LoadNetworkFileTaskFactory;
 import org.cytoscape.task.read.LoadTableFileTaskFactory;
+import org.cytoscape.task.read.OpenSessionTaskFactory;
 import org.cytoscape.io.read.InputStreamTaskFactory;
 
 public class CyActivator extends AbstractCyActivator {
@@ -21,6 +22,7 @@ public class CyActivator extends AbstractCyActivator {
     
     final LoadNetworkFileTaskFactory loadNetworkFileTF = getService(bc, LoadNetworkFileTaskFactory.class);
     final LoadTableFileTaskFactory loadTableFileTF = getService(bc, LoadTableFileTaskFactory.class);
+    final OpenSessionTaskFactory openSeshTF = getService(bc, OpenSessionTaskFactory.class);
     final CyApplicationConfiguration cyAppConf = getService(bc, CyApplicationConfiguration.class);
     final CySwingApplication cySwingApp = getService(bc, CySwingApplication.class);
     final TaskManager taskMgr = getService(bc, DialogTaskManager.class);
@@ -31,7 +33,7 @@ public class CyActivator extends AbstractCyActivator {
     final ImporterMgr importerMgr = new ImporterMgr();
     registerServiceListener(bc, importerMgr, "addFactory", "removeFactory", InputStreamTaskFactory.class);
 
-    registerService(bc, new BrowseTaskFactory(cySwingApp, clientMgr, taskMgr, authCacheMgr, importerMgr, loadNetworkFileTF, loadTableFileTF), TaskFactory.class, ezProps(
+    registerService(bc, new BrowseTaskFactory(cySwingApp, clientMgr, taskMgr, authCacheMgr, importerMgr, loadNetworkFileTF, loadTableFileTF, openSeshTF), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "Synapse...",
       ServiceProperties.PREFERRED_MENU, "Apps"
     ));
@@ -43,6 +45,11 @@ public class CyActivator extends AbstractCyActivator {
 
     registerService(bc, new ImportTableFromSynapseTaskFactory(loadTableFileTF, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
       ServiceProperties.COMMAND, "import-table",
+      ServiceProperties.COMMAND_NAMESPACE, "synapse"
+    ));
+
+    registerService(bc, new OpenSessionFromSynapseTaskFactory(openSeshTF, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
+      ServiceProperties.COMMAND, "import-session",
       ServiceProperties.COMMAND_NAMESPACE, "synapse"
     ));
   }

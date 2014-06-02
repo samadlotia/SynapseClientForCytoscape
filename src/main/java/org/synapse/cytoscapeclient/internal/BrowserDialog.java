@@ -59,6 +59,7 @@ import org.cytoscape.work.TaskMonitor;
 
 import org.cytoscape.task.read.LoadNetworkFileTaskFactory;
 import org.cytoscape.task.read.LoadTableFileTaskFactory;
+import org.cytoscape.task.read.OpenSessionTaskFactory;
 import org.cytoscape.io.DataCategory;
 
 class BrowserDialog {
@@ -71,6 +72,7 @@ class BrowserDialog {
   final JTree tree;
   final JButton importNetworkBtn;
   final JButton importTableBtn;
+  final JButton importSessionBtn;
   final JButton saveBtn;
   final Markdown4jProcessor mdProcessor = new Markdown4jProcessor();
   final JLabel loadingLabel;
@@ -84,7 +86,8 @@ class BrowserDialog {
         final TaskManager taskMgr,
         final ImporterMgr importerMgr,
         final LoadNetworkFileTaskFactory loadNetworkFileTF,
-        final LoadTableFileTaskFactory loadTableFileTF) {
+        final LoadTableFileTaskFactory loadTableFileTF,
+        final OpenSessionTaskFactory openSeshTF) {
     client = clientMgr.get();
     this.taskMgr = taskMgr;
     this.importerMgr = importerMgr;
@@ -121,6 +124,15 @@ class BrowserDialog {
       }
     });
     importTableBtn.setEnabled(false);
+
+    importSessionBtn = new JButton("Import as Session");
+    importSessionBtn.addActionListener(new ActionListener() {
+      public void actionPerformed(ActionEvent e) {
+        final SynClient.Entity entity = getSelectedEntity();
+        taskMgr.execute(new TaskIterator(OpenSessionFromSynapseTask.noTunables(openSeshTF, clientMgr, entity.getId())));
+      }
+    });
+    importSessionBtn.setEnabled(false);
 
     saveBtn = new JButton("Save As...");
     saveBtn.addActionListener(new ActionListener() {
@@ -202,6 +214,7 @@ class BrowserDialog {
     final JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
     buttonsPanel.add(importNetworkBtn);
     buttonsPanel.add(importTableBtn);
+    buttonsPanel.add(importSessionBtn);
     buttonsPanel.add(saveBtn);
 
     final JPanel secondaryPanel = new JPanel(new GridBagLayout());
@@ -278,19 +291,22 @@ class BrowserDialog {
 
       boolean enableNetworkBtn = false;
       boolean enableTableBtn = false;
+      boolean enableSessionBtn = false;
       boolean enableSaveBtn = false;
       if (entity != null && SynClient.EntityType.FILE.equals(entity.getType())) {
         enableSaveBtn = true;
         final String extension = getExtension(entity.getName());
         if (extension == null) {
-          enableNetworkBtn = enableTableBtn = true;
+          enableNetworkBtn = enableTableBtn = enableSessionBtn = true;
         } else {
           enableNetworkBtn = importerMgr.doesImporterExist(extension, DataCategory.NETWORK);
           enableTableBtn = importerMgr.doesImporterExist(extension, DataCategory.TABLE);
+          enableSessionBtn = importerMgr.doesImporterExist(extension, DataCategory.SESSION);
         }
       }
       importNetworkBtn.setEnabled(enableNetworkBtn);
       importTableBtn.setEnabled(enableTableBtn);
+      importSessionBtn.setEnabled(enableSessionBtn);
       saveBtn.setEnabled(enableSaveBtn);
     }
   }

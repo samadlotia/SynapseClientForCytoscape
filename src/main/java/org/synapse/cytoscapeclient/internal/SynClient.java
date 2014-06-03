@@ -238,14 +238,14 @@ public class SynClient {
 
     private ReqTask<T> exec() throws IOException, ClientProtocolException {
       try {
-        System.out.println(String.format("Req[%x] exec(%s)", this.hashCode(), req));
+        //System.out.println(String.format("Req[%x] exec(%s)", this.hashCode(), req));
         this.resp = client.execute(req, context);
       } catch (IOException e) {
         if (resp != null) {
           end(); // clean up req & response obj
         }
         if (!cancelled) { // ignore exceptions thrown if cancelled
-          System.out.println("Req failed: " + req);
+          //System.out.println("Req failed: " + req);
           throw e;
         }
       }
@@ -330,7 +330,7 @@ public class SynClient {
     }
 
     protected void end() {
-      System.out.println(String.format("Req[%x] end()", this.hashCode(), req));
+      //System.out.println(String.format("Req[%x] end()", this.hashCode(), req));
       try {
         resp.close();
         req.releaseConnection();
@@ -461,33 +461,6 @@ public class SynClient {
           children.add(child);
         }
 
-        /*
-        get(REPO_ENDPOINT, "/entity/", parentId, "/children");
-        if (resp == null || resp.getStatusLine().getStatusCode() == 403 || resp.getStatusLine().getStatusCode() == 401) {
-          return null;
-        }
-        final JsonNode jchildren = ensure2xx().json();
-        if (jchildren == null)
-          return null;
-        for (final JsonNode jchild : jchildren.get("idList")) {
-          if (super.cancelled)
-            return null;
-          final String id = jchild.get("id").textValue();
-          get(REPO_ENDPOINT, "/entity/", id, "/bundle?mask=", Integer.toString(0x1 | 0x20));
-          if (resp == null || resp.getStatusLine().getStatusCode() == 403 || resp.getStatusLine().getStatusCode() == 401) {
-            end();
-            continue;
-          }
-          final JsonNode jinfo = ensure2xx().json();
-          if (jinfo == null)
-            return null;
-          final JsonNode jentity = jinfo.get("entity");
-          final String name = jentity.get("name").textValue();
-          final String type = jentity.get("entityType").textValue();
-          final Entity child = new Entity(id, name, type);
-          children.add(child);
-        }
-        */
         return children;
       }
     };

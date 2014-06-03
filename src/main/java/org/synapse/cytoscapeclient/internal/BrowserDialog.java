@@ -1,6 +1,8 @@
 package org.synapse.cytoscapeclient.internal;
 
+import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -19,9 +21,13 @@ import java.awt.RenderingHints;
 
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseAdapter;
 
 import java.awt.geom.RoundRectangle2D;
 
+import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -52,6 +58,7 @@ import javax.swing.event.DocumentListener;
 
 import org.markdown4j.Markdown4jProcessor;
 
+import org.cytoscape.work.Task;
 import org.cytoscape.work.TaskManager;
 import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.TaskIterator;
@@ -63,16 +70,18 @@ import org.cytoscape.task.read.OpenSessionTaskFactory;
 import org.cytoscape.io.DataCategory;
 
 class BrowserDialog {
+  final SynClientMgr clientMgr;
   final SynClient client;
   final TaskManager taskMgr;
   final ImporterMgr importerMgr;
+  final LoadNetworkFileTaskFactory loadNetworkFileTF;
+  final LoadTableFileTaskFactory loadTableFileTF;
+  final OpenSessionTaskFactory openSeshTF;
   final JEditorPane infoPane;
   final JDialog dialog;
   final DefaultTreeModel model;
   final JTree tree;
-  final JButton importNetworkBtn;
-  final JButton importTableBtn;
-  final JButton importSessionBtn;
+  final JButton importBtn;
   final JButton saveBtn;
   final Markdown4jProcessor mdProcessor = new Markdown4jProcessor();
   final JLabel loadingLabel;
@@ -88,9 +97,13 @@ class BrowserDialog {
         final LoadNetworkFileTaskFactory loadNetworkFileTF,
         final LoadTableFileTaskFactory loadTableFileTF,
         final OpenSessionTaskFactory openSeshTF) {
+    this.clientMgr = clientMgr;
     client = clientMgr.get();
     this.taskMgr = taskMgr;
     this.importerMgr = importerMgr;
+    this.loadNetworkFileTF = loadNetworkFileTF;
+    this.loadTableFileTF = loadTableFileTF;
+    this.openSeshTF = openSeshTF;
 
     dialog = new JDialog(parent, "Synapse", false);
 
@@ -103,36 +116,12 @@ class BrowserDialog {
 
     loadingLabel = new JLabel();
     loadingLabel.setIcon(new ImageIcon(getClass().getResource("/img/loading.gif")));
-    loadingLabel.setVisible(false);
+    //loadingLabel.setVisible(false);
 
     this.asyncTaskMgr = new AsyncTaskMgr(this);
 
-    importNetworkBtn = new JButton("Import as Network");
-    importNetworkBtn.addActionListener(new ActionListener() {
-      public void actionPerformed(ActionEvent e) {
-        final SynClient.Entity entity = getSelectedEntity();
-        taskMgr.execute(new TaskIterator(ImportNetworkFromSynapseTask.noTunables(loadNetworkFileTF, clientMgr, entity.getId())));
-      }
-    });
-    importNetworkBtn.setEnabled(false);
-
-    importTableBtn = new JButton("Import as Table");
-    importTableBtn.addActionListener(new ActionListener() {
-      public void actionPerformed(ActionEvent e) {
-        final SynClient.Entity entity = getSelectedEntity();
-        taskMgr.execute(new TaskIterator(ImportTableFromSynapseTask.noTunables(loadTableFileTF, clientMgr, entity.getId())));
-      }
-    });
-    importTableBtn.setEnabled(false);
-
-    importSessionBtn = new JButton("Import as Session");
-    importSessionBtn.addActionListener(new ActionListener() {
-      public void actionPerformed(ActionEvent e) {
-        final SynClient.Entity entity = getSelectedEntity();
-        taskMgr.execute(new TaskIterator(OpenSessionFromSynapseTask.noTunables(openSeshTF, clientMgr, entity.getId())));
-      }
-    });
-    importSessionBtn.setEnabled(false);
+    importBtn = new JButton("Import");
+    importBtn.setEnabled(false);
 
     saveBtn = new JButton("Save As...");
     saveBtn.addActionListener(new ActionListener() {
@@ -212,9 +201,7 @@ class BrowserDialog {
     primaryPanel.add(new JScrollPane(tree), e.down().noInsets().expandHV());
 
     final JPanel buttonsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-    buttonsPanel.add(importNetworkBtn);
-    buttonsPanel.add(importTableBtn);
-    buttonsPanel.add(importSessionBtn);
+    buttonsPanel.add(importBtn);
     buttonsPanel.add(saveBtn);
 
     final JPanel secondaryPanel = new JPanel(new GridBagLayout());
@@ -256,7 +243,8 @@ class BrowserDialog {
   }
 
   public void loadingDone() {
-    loadingLabel.setVisible(false);
+    loadingLabel.setText("");
+    loadingLabel.setIcon(null);
   }
 
   private SynClient.Entity getSelectedEntity() {
@@ -280,35 +268,111 @@ class BrowserDialog {
 
   class UpdateDescriptionAndImportButtons implements TreeSelectionListener {
     public void valueChanged(TreeSelectionEvent e) {
-      final SynClient.Entity entity = getSelectedEntity();
-      if (entity == null) {
-        infoPane.setText("");
-      } else {
-        setEntityDescription(entity);
-        final ResultTask<String> descriptionTask = client.newDescriptionMarkdownTask(entity.getId());
-        asyncTaskMgr.execute(new TaskIterator(descriptionTask, new ShowDescription(entity, descriptionTask)));
-      }
-
-      boolean enableNetworkBtn = false;
-      boolean enableTableBtn = false;
-      boolean enableSessionBtn = false;
-      boolean enableSaveBtn = false;
-      if (entity != null && SynClient.EntityType.FILE.equals(entity.getType())) {
-        enableSaveBtn = true;
-        final String extension = getExtension(entity.getName());
-        if (extension == null) {
-          enableNetworkBtn = enableTableBtn = enableSessionBtn = true;
-        } else {
-          enableNetworkBtn = importerMgr.doesImporterExist(extension, DataCategory.NETWORK);
-          enableTableBtn = importerMgr.doesImporterExist(extension, DataCategory.TABLE);
-          enableSessionBtn = importerMgr.doesImporterExist(extension, DataCategory.SESSION);
-        }
-      }
-      importNetworkBtn.setEnabled(enableNetworkBtn);
-      importTableBtn.setEnabled(enableTableBtn);
-      importSessionBtn.setEnabled(enableSessionBtn);
-      saveBtn.setEnabled(enableSaveBtn);
+      updateDescription();
+      updateImportBtn();
+      updateSaveBtn();
     }
+  }
+
+  private void updateDescription() {
+    final SynClient.Entity entity = getSelectedEntity();
+    if (entity == null) {
+      infoPane.setText("");
+    } else {
+      setEntityDescription(entity);
+      final ResultTask<String> descriptionTask = client.newDescriptionMarkdownTask(entity.getId());
+      asyncTaskMgr.execute(new TaskIterator(descriptionTask, new ShowDescription(entity, descriptionTask)));
+    }
+  }
+
+  private EnumSet<DataCategory> getAvailableImportersForSelectedEntity() {
+    final SynClient.Entity entity = getSelectedEntity();
+    if (entity == null || !(SynClient.EntityType.FILE.equals(entity.getType()))) {
+      // is the selected entity of a file?
+      return EnumSet.noneOf(DataCategory.class);
+    }
+
+    final String extension = getExtension(entity.getName());
+    if (extension == null) {
+      // if there's no file name extension, return everything so the user can decide
+      return EnumSet.of(DataCategory.NETWORK, DataCategory.TABLE, DataCategory.SESSION);
+    }
+
+    // go thru each relevant data category and see if an importer exists
+    final EnumSet<DataCategory> importers = EnumSet.noneOf(DataCategory.class);
+    for (final DataCategory category : Arrays.asList(
+        DataCategory.NETWORK,
+        DataCategory.TABLE,
+        DataCategory.SESSION)) {
+      if (importerMgr.doesImporterExist(extension, category)) {
+        importers.add(category);
+      }
+    }
+    return importers;
+  }
+
+  private void removeListeners(final JButton btn) {
+    for (final ActionListener listener : btn.getActionListeners()) {
+      btn.removeActionListener(listener);
+    }
+  }
+
+  private void runFileReaderTaskForDataCategory(final DataCategory category, final SynClient.Entity entity) {
+    Task task = null;
+    switch(category) {
+      case NETWORK:
+      task = ImportNetworkFromSynapseTask.noTunables(loadNetworkFileTF, clientMgr, entity.getId());
+      break;
+      case TABLE:
+      task = ImportTableFromSynapseTask.noTunables(loadTableFileTF, clientMgr, entity.getId());
+      break;
+      case SESSION:
+      task = OpenSessionFromSynapseTask.noTunables(openSeshTF, clientMgr, entity.getId());
+      break;
+    }
+    taskMgr.execute(new TaskIterator(task));
+  }
+
+  private void updateImportBtn() {
+    removeListeners(importBtn);
+
+    final EnumSet<DataCategory> importers = getAvailableImportersForSelectedEntity();
+    if (importers.size() == 0) {
+      importBtn.setText("Import");
+      importBtn.setEnabled(false);
+    } else if (importers.size() == 1) {
+      final DataCategory category = importers.iterator().next();
+      importBtn.setText("Import " + category.getDisplayName());
+      importBtn.setEnabled(true);
+      importBtn.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          runFileReaderTaskForDataCategory(category, getSelectedEntity());
+        }
+      });
+    } else {
+      importBtn.setText("Import \u25be");
+      importBtn.setEnabled(true);
+      final JPopupMenu menu = new JPopupMenu();
+      for (final DataCategory category : importers) {
+        final AbstractAction action = new AbstractAction(category.getDisplayName()) {
+          public void actionPerformed(ActionEvent e) {
+            runFileReaderTaskForDataCategory(category, getSelectedEntity());
+          }
+        };
+        menu.add(action);
+      }
+      importBtn.addActionListener(new ActionListener() {
+        public void actionPerformed(ActionEvent e) {
+          menu.show(importBtn, 0, importBtn.getHeight());
+        }
+      });
+    }
+  }
+
+  private void updateSaveBtn() {
+    final SynClient.Entity entity = getSelectedEntity();
+    final boolean canSave = entity != null && SynClient.EntityType.FILE.equals(entity.getType());
+    saveBtn.setEnabled(canSave);
   }
 
   class ShowUserProjects extends AbstractTask {

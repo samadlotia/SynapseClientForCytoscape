@@ -10,7 +10,7 @@
 	<groupId>org.synapse</groupId>
 	<artifactId>cytoscapeclient</artifactId>
 	<packaging>bundle</packaging>
-	<version>1.0.0</version>
+	<version>1.0.1</version>
 
 	<build>
 		<plugins>
@@ -22,9 +22,10 @@
 				<configuration>
 					<instructions>
             <Bundle-SymbolicName>${bundle.pkg}</Bundle-SymbolicName>
+            <Bundle-Name>Synapse Client</Bundle-Name>
             <Bundle-Version>${project.version}</Bundle-Version>
             <Export-Package>!${bundle.pkg}.internal.*</Export-Package>
-            <Private-Package>${bundle.pkg}.*,com.fasterxml.*,org.apache.http.*,org.apache.commons.codec.*,org.markdown4j.*,com.github.rjeschke.txtmark.*</Private-Package>
+            <Private-Package>${bundle.pkg}.*,com.fasterxml.*,org.apache.http.*,org.apache.commons.codec.*,com.github.rjeschke.txtmark.*</Private-Package>
             <Bundle-Activator>${bundle.pkg}.internal.CyActivator</Bundle-Activator>
 					</instructions>
 				</configuration>
@@ -163,9 +164,9 @@
 			<version>4.3</version>
 		</dependency>
 		<dependency>
-			<groupId>org.commonjava.googlecode.markdown4j</groupId>
-			<artifactId>markdown4j</artifactId>
-			<version>2.2-cj-1.0</version>
+			<groupId>com.github.rjeschke</groupId>
+			<artifactId>txtmark</artifactId>
+			<version>0.11</version>
 		</dependency>
 	</dependencies>
 </project>

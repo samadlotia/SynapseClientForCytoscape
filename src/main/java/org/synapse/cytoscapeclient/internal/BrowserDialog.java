@@ -56,7 +56,7 @@ import javax.swing.event.TreeSelectionListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 
-import org.markdown4j.Markdown4jProcessor;
+import com.github.rjeschke.txtmark.Processor;
 
 import org.cytoscape.work.Task;
 import org.cytoscape.work.TaskManager;
@@ -83,7 +83,6 @@ class BrowserDialog {
   final JTree tree;
   final JButton importBtn;
   final JButton saveBtn;
-  final Markdown4jProcessor mdProcessor = new Markdown4jProcessor();
   final JLabel loadingLabel;
   final AsyncTaskMgr asyncTaskMgr;
   final JTextField searchField;
@@ -492,7 +491,7 @@ class BrowserDialog {
         return;
       final String descriptionMd = descriptionTask.get();
       if (descriptionMd != null) {
-        final String descriptionHtml = mdProcessor.process(descriptionMd);
+        final String descriptionHtml = Processor.process(descriptionMd);
         setEntityDescription(entity, descriptionHtml);
       }
     }

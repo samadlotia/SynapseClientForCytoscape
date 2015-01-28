@@ -16,6 +16,11 @@ import org.cytoscape.task.read.OpenSessionTaskFactory;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
+/**
+ * This task opens the Browse dialog.
+ * This will ensure that the user has successfully
+ * logged into Synapse before showing the Browse dialog.
+ */
 public class BrowseTask extends AbstractTask {
   final CySwingApplication cySwingApp;
   final SynClientMgr clientMgr;

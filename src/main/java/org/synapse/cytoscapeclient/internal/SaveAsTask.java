@@ -7,6 +7,10 @@ import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskMonitor;
 import org.cytoscape.work.Tunable;
 
+/**
+ * Task used in the {@code BrowserDialog} to
+ * save a Synapse entity to the user's disk.
+ */
 public class SaveAsTask extends AbstractTask {
   @Tunable(description="Save file from Synapse as", params="input=false;fileCategory=unspecified")
   public File file;

@@ -69,6 +69,13 @@ import org.cytoscape.task.read.LoadTableFileTaskFactory;
 import org.cytoscape.task.read.OpenSessionTaskFactory;
 import org.cytoscape.io.DataCategory;
 
+/**
+ * This is the main UI component of the Synapse client.
+ *
+ * This dialog shows the contents of a Synapse user's "home" folder,
+ * search results, and entity information. It also initiates
+ * load and download tasks.
+ */
 class BrowserDialog {
   final SynClientMgr clientMgr;
   final SynClient client;

@@ -1,5 +1,4 @@
-package org.synapse.cytoscapeclient.internal;
-
+package org.synapse.cytoscapeclient.internal; 
 
 import java.util.Date;
 import java.util.TimeZone;
@@ -19,6 +18,12 @@ import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.protocol.HttpContext;
 
+/**
+ * Adds authentication headers to http requests made to the Synapse web service.
+ * The Synapse web service requires authenticated http requests to have {@code userId},
+ * {@code signatureTimestamp}, and {@code signature} http headers. This
+ * class adds these headers.
+ */
 public class APIKeyAuth implements HttpRequestInterceptor {
   final static String CRYPT_ALGO = "HmacSHA1";
 

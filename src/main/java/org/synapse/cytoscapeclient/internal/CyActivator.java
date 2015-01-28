@@ -20,6 +20,7 @@ public class CyActivator extends AbstractCyActivator {
   public void start(BundleContext bc) {
     System.out.println((new java.util.Date()).toString() + " started: " + getClass().getName());
     
+    // Get Cytoscape services
     final LoadNetworkFileTaskFactory loadNetworkFileTF = getService(bc, LoadNetworkFileTaskFactory.class);
     final LoadTableFileTaskFactory loadTableFileTF = getService(bc, LoadTableFileTaskFactory.class);
     final OpenSessionTaskFactory openSeshTF = getService(bc, OpenSessionTaskFactory.class);
@@ -27,16 +28,20 @@ public class CyActivator extends AbstractCyActivator {
     final CySwingApplication cySwingApp = getService(bc, CySwingApplication.class);
     final TaskManager taskMgr = getService(bc, DialogTaskManager.class);
 
+    // Create internal objects
     final SynClientMgr clientMgr = new SynClientMgr();
     final AuthCacheMgr authCacheMgr = new AuthCacheMgr(cyAppConf.getAppConfigurationDirectoryLocation(this.getClass()));
 
     final ImporterMgr importerMgr = new ImporterMgr();
     registerServiceListener(bc, importerMgr, "addFactory", "removeFactory", InputStreamTaskFactory.class);
 
+    // Register GUI Synapse menu item
     registerService(bc, new BrowseTaskFactory(cySwingApp, clientMgr, taskMgr, authCacheMgr, importerMgr, loadNetworkFileTF, loadTableFileTF, openSeshTF), TaskFactory.class, ezProps(
       ServiceProperties.TITLE, "Synapse...",
       ServiceProperties.PREFERRED_MENU, "Apps"
     ));
+
+    // Register commands
 
     registerService(bc, new ImportNetworkFromSynapseTaskFactory(loadNetworkFileTF, clientMgr, authCacheMgr), TaskFactory.class, ezProps(
       ServiceProperties.COMMAND, "import-network",

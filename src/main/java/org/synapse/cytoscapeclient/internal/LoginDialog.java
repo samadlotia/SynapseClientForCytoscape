@@ -19,6 +19,11 @@ import java.awt.FlowLayout;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
+/**
+ * Dialog for the user to enter login credentials.
+ * We can't use tunables here due to the help text
+ * provided with each text field.
+ */
 public class LoginDialog {
   final JDialog dialog;
   final JTextField userField;

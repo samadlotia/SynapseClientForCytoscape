@@ -8,6 +8,12 @@ import org.cytoscape.io.CyFileFilter;
 import org.cytoscape.io.DataCategory;
 import org.cytoscape.io.read.InputStreamTaskFactory;
 
+/**
+ * Maintains instances of {@code InputStreamTaskFactory} that have
+ * been registered through Cytoscape.
+ * This class is used to find the appropriate task factory that
+ * can import a given network, table, or session file.
+ */
 public class ImporterMgr {
   final Set<CyFileFilter> fileFilters = new HashSet<CyFileFilter>();
 

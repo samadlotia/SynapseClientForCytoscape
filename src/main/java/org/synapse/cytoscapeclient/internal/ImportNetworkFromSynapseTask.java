@@ -18,6 +18,9 @@ import org.cytoscape.model.subnetwork.CySubNetwork;
 import org.cytoscape.model.subnetwork.CyRootNetwork;
 
 
+/**
+ * Command task factory for importing a Synapse entity as a network.
+ */
 public class ImportNetworkFromSynapseTask extends AbstractTask {
   final LoadNetworkFileTaskFactory loadNetworkFileTF;
   final SynClientMgr clientMgr;

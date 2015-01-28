@@ -4,6 +4,9 @@ import org.cytoscape.work.AbstractTask;
 import org.cytoscape.work.Tunable;
 import org.cytoscape.work.TaskMonitor;
 
+/**
+ * Command task for logging into Synapse.
+ */
 public class LoginTask extends AbstractTask {
   final SynClientMgr clientMgr;
   final AuthCacheMgr authCacheMgr;

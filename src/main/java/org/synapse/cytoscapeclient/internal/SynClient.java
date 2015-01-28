@@ -54,7 +54,15 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import org.cytoscape.work.TaskMonitor;
 
+/**
+ * Synapse REST API client using Apache Http Client.
+ * We don't use the Java client provided by Synapse
+ * because it does not allow for cancelling requests.
+ */
 public class SynClient {
+  // These static classes below are multi-field
+  // results of a Synapse REST call.
+
   public static class UserProfile {
     final String ownerId;
     final String userName;
@@ -206,6 +214,9 @@ public class SynClient {
         .build();
   }
 
+  /**
+   * Represents a cancellable REST request to Synapse.
+   */
   abstract class ReqTask<T> extends ResultTask<T> {
     protected final HttpContext context;
     protected volatile boolean cancelled = false;
@@ -216,11 +227,18 @@ public class SynClient {
       this.context = HttpClientContext.create();
     }
 
+    /**
+     * Performs a GET HTTP request at the URL contained in {@code pieces}.
+     */
     protected ReqTask<T> get(final String ... pieces) throws ClientProtocolException, IOException {
       this.req = new HttpGet(join(pieces));
       return exec();
     }
 
+    /**
+     * Performs a PUT HTTP request at the provided URL; the data for
+     * the PUT operation is a JSON object specified by {@code jobj}.
+     */
     protected ReqTask<T> postJson(final String url, final TreeNode jobj) throws UnsupportedEncodingException, ClientProtocolException, IOException {
       final ByteArrayOutputStream output = new ByteArrayOutputStream();
       final ObjectMapper mapper = new ObjectMapper();
@@ -236,6 +254,10 @@ public class SynClient {
       return exec();
     }
 
+    /**
+     * Called by {@code get} or {@code postJson} to execute the
+     * GET or PUT request.
+     */
     private ReqTask<T> exec() throws IOException, ClientProtocolException {
       try {
         //System.out.println(String.format("Req[%x] exec(%s)", this.hashCode(), req));
@@ -252,6 +274,11 @@ public class SynClient {
       return this;
     }
 
+    /**
+     * Guarantees that the client returned a 2xx HTTP response (successful);
+     * otherwise throws an exception.
+     * This method can only be called after {@code get} and {@code postJson}.
+     */
     protected ReqTask<T> ensure2xx() throws SynClientException {
       if (resp == null)
         return this;
@@ -264,6 +291,13 @@ public class SynClient {
       return this;
     }
 
+    /**
+     * Take the response from the server and parse it as a JSON
+     * object.
+     * This method can only be called after {@code get} and {@code postJson}.
+     *
+     * This will close the response after completion. You do not need to call {@code end}.
+     */
     protected JsonNode json() throws IOException {
       if (resp == null)
         return null;
@@ -275,6 +309,12 @@ public class SynClient {
       }
     }
 
+    /**
+     * Return the response from the server as a String.
+     * This method can only be called after {@code get} and {@code postJson}.
+     *
+     * This will close the response after completion. You do not need to call {@code end}.
+     */
     protected String string() throws IOException {
       if (resp == null)
         return null;
@@ -303,6 +343,10 @@ public class SynClient {
 
     static final int BLOCK_SIZE = 256 * 1024; /* 256 kb per block */
 
+    /**
+     * Write the response from the server to the given {@code OutputStream}.
+     * This will close the response after completion. You do not need to call {@code end}.
+     */
     protected void write(final OutputStream output, final TaskMonitor monitor) throws IOException {
       if (resp == null)
         return;
@@ -329,6 +373,13 @@ public class SynClient {
       }
     }
 
+    /**
+     * Cleans up resources after the request completes.
+     * This <em>must</em> be called whenever issuing a request.
+     * 
+     * You will need to call this method if you did not call
+     * {@code string} or {@code json}.
+     */
     protected void end() {
       //System.out.println(String.format("Req[%x] end()", this.hashCode(), req));
       try {
@@ -342,6 +393,9 @@ public class SynClient {
       }
     }
 
+    /**
+     * Called by the task manager to prematurely cancel the request.
+     */
     public void cancel() {
       cancelled = true; // this MUST be set before calling HttpUriRequest.abort() to avoid unnecessary exceptions being thrown
       final HttpUriRequest req2 = this.req; // copy the reference to req to prevent it from becoming null while trying to abort it
@@ -475,6 +529,9 @@ public class SynClient {
           return null;
         final int statusCode = resp.getStatusLine().getStatusCode();
         if (statusCode == 404) {
+          // 404 is an acceptable response from the server, so we can't
+          // call ensure2xx(), otherwise it would inappropriately raise an
+          // exception. Thus we manually handle 404 here.
           end();
           return null;
         } else {

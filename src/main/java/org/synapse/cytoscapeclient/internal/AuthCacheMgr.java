@@ -10,6 +10,13 @@ import java.util.Properties;
 
 import org.apache.log4j.Logger;
 
+/**
+ * This class saves and loads the user's login credentials
+ * (username, API key) to a cache file.
+ *
+ * This is used to persist login credentials between
+ * Cytoscape instances.
+ */
 class AuthCacheMgr {
   final Logger logger = Logger.getLogger(this.getClass());
   final Properties props = new Properties();

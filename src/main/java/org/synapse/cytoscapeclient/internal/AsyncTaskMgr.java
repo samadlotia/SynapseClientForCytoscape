@@ -9,8 +9,22 @@ import org.cytoscape.work.Task;
 import org.cytoscape.work.TaskIterator;
 import org.cytoscape.work.TaskMonitor;
 
+/**
+ * Executes tasks asynchronously. 
+ *
+ * This is to be used only executing Synapse web query tasks.
+ *
+ * Acts as a replacement for {@link org.cytoscape.work.TaskManager}
+ * where task execution does not block the UI.
+ *
+ * This updates {@code BrowserDialog} UI according to the status of
+ * task execution. Task titles are shown at the bottom of the
+ * {@code BrowserDialog}. If any task is currently executing,
+ * a "loading" icon is shown at the bottom of the task as well.
+ * If all tasks have finished executing, the "loading" icon is closed.
+ */
 class AsyncTaskMgr {
-  public static final int N_THREADS = 16;
+  public static final int N_THREADS = 16; // HttpClient needs to know this value
   final BrowserDialog dialog;
   final ExecutorService service;
   final AtomicInteger activeTasks;

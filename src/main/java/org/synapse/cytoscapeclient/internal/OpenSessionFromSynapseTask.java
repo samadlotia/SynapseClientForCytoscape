@@ -9,6 +9,9 @@ import org.cytoscape.work.TaskMonitor;
 import org.cytoscape.work.TaskIterator;
 import org.cytoscape.task.read.OpenSessionTaskFactory;
 
+/**
+ * Command task for importing a Synapse entity as a session file.
+ */
 public class OpenSessionFromSynapseTask extends AbstractTask {
   final OpenSessionTaskFactory openSeshTF;
   final SynClientMgr clientMgr;
